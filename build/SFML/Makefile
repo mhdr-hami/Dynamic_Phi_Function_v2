@@ -28,29 +28,13 @@ PROJECTS = \
   apps/puzzlesample \
   apps/mapUtils \
   apps/prediction \
-  apps/emotion \
-  apps/3dmaps \
-  apps/rubik \
-  apps/bidirectional \
   apps/voxel \
   apps/delta \
   apps/fling \
   apps/stp \
   apps/PDB \
-  apps/roads \
   apps/canonicalGrids \
   apps/delta \
-  demos/ACA \
-  demos/BOA \
-  demos/DFID \
-  demos/dijkstra \
-  demos/astar \
-  demos/idastar \
-  demos/fastmap \
-  demos/racetrack \
-  demos/bidir \
-  demos/multiTarget \
-  demos/rc \
   papers/IBEX \
   papers/DWA \
   papers/BGS \
@@ -65,6 +49,22 @@ PROJECTS = \
 #  apps/airplane \
 #  apps/hexagon \
 #  demos/pancake \
+#  demos/ACA \
+#   demos/BOA \
+#   demos/DFID \
+#   demos/dijkstra \
+#   demos/astar \
+#   demos/idastar \
+#   demos/fastmap \
+#   demos/racetrack \
+#   demos/bidir \
+#   demos/multiTarget \
+#   demos/rc \
+# apps/emotion \
+#   apps/3dmaps \
+#   apps/rubik \
+#   apps/bidirectional \
+# apps/roads \
 
 
 
@@ -100,7 +100,6 @@ PROJECTS_ALL = \
   apps/dragonage \
   apps/sfbds \
   apps/prediction \
-  apps/rubik \
   apps/fling \
   apps/bidirectional \
   apps/voxel \
@@ -108,20 +107,21 @@ PROJECTS_ALL = \
   apps/stp \
   apps/roads \
   apps/delta \
-  apps/pancake \
-  apps/multiagent \
-  demos/ACA \
-  demos/BOA \
-  demos/DFID \
-  demos/dijkstra \
-  demos/astar \
-  demos/bidir \
-  demos/idastar \
-  apps/snakebird \
   papers/DSDWA \
 #  papers/IBEX \
 #	apps/coprobber
 #  apps/arm \
+# apps/rubik \
+# demos/ACA \
+#   demos/BOA \
+#   demos/DFID \
+#   demos/dijkstra \
+#   demos/astar \
+#   demos/bidir \
+#   demos/idastar \
+# apps/pancake \
+#   apps/multiagent \
+#   apps/snakebird \
 
 TESTS = \
 	tests/mnpuzzle \
