@@ -1,0 +1,212 @@
+<?xml version="1.0" standalone="yes"?>
+<object class="NSIBObjectData">
+  <object name="rootObject" class="NSCustomObject" id="1">
+  </object>
+  <array count="26" name="allObjects">
+    <object class="IBCarbonMenuItem" id="216">
+      <string name="title">Set Dimensions</string>
+      <string name="keyEquivalent">d</string>
+      <boolean name="updateSingleItem">TRUE</boolean>
+      <ostype name="command">gogo</ostype>
+    </object>
+    <object class="IBCarbonMenu" id="200">
+      <string name="title">main</string>
+      <string name="name">_NSMainMenu</string>
+      <array count="3" name="items">
+        <object class="IBCarbonMenuItem" id="208">
+          <string name="title">HOG - Pathfinding</string>
+          <boolean name="updateSingleItem">TRUE</boolean>
+          <object name="submenu" class="IBCarbonMenu" id="209">
+            <string name="title">HOG - Pathfinding</string>
+            <string name="name">_NSAppleMenu</string>
+            <array count="2" name="items">
+              <object class="IBCarbonMenuItem" id="211">
+                <string name="title">About Pathfinding</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <int name="keyEquivalentModifier">0</int>
+              </object>
+              <object class="IBCarbonMenuItem" id="210">
+                <boolean name="separator">TRUE</boolean>
+                <boolean name="updateSingleItem">TRUE</boolean>
+              </object>
+            </array>
+          </object>
+        </object>
+        <object class="IBCarbonMenuItem" id="201">
+          <string name="title">File</string>
+          <boolean name="updateSingleItem">TRUE</boolean>
+          <object name="submenu" class="IBCarbonMenu" id="202">
+            <string name="title">File</string>
+            <array count="8" name="items">
+              <object class="IBCarbonMenuItem" id="203">
+                <string name="title">New</string>
+                <string name="keyEquivalent">n</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">neww</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="206">
+                <string name="title">Open Map</string>
+                <string name="keyEquivalent">o</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">open</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="204">
+                <boolean name="separator">TRUE</boolean>
+                <boolean name="updateSingleItem">TRUE</boolean>
+              </object>
+              <object class="IBCarbonMenuItem" id="207">
+                <string name="title">Close</string>
+                <string name="keyEquivalent">w</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">clsw</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="205">
+                <string name="title">Save</string>
+                <string name="keyEquivalent">s</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">save</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="219">
+                <boolean name="separator">TRUE</boolean>
+                <boolean name="updateSingleItem">TRUE</boolean>
+              </object>
+              <object class="IBCarbonMenuItem" id="220">
+                <string name="title">Export Screenshot</string>
+                <string name="keyEquivalent">e</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">EXPT</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="222">
+                <string name="title">Record Movie</string>
+                <string name="keyEquivalent">r</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">RMOV</ostype>
+              </object>
+            </array>
+          </object>
+        </object>
+        <object class="IBCarbonMenuItem" id="212">
+          <string name="title">Map</string>
+          <boolean name="updateSingleItem">TRUE</boolean>
+          <object name="submenu" class="IBCarbonMenu" id="213">
+            <string name="title">Map</string>
+            <array count="3" name="items">
+              <object class="IBCarbonMenuItem" id="215">
+                <string name="title">Show Info</string>
+                <string name="keyEquivalent">i</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">info</ostype>
+              </object>
+              <object class="IBCarbonMenuItem" id="214">
+                <string name="title">Animate</string>
+                <string name="keyEquivalent">a</string>
+                <boolean name="updateSingleItem">TRUE</boolean>
+                <ostype name="command">gogo</ostype>
+              </object>
+              <reference idRef="216"/>
+            </array>
+          </object>
+        </object>
+      </array>
+    </object>
+    <reference idRef="212"/>
+    <reference idRef="209"/>
+    <object class="IBCarbonStaticText" id="226">
+      <string name="title">Building and exporting movie...</string>
+      <string name="bounds">20 20 36 228 </string>
+    </object>
+    <reference idRef="205"/>
+    <reference idRef="202"/>
+    <reference idRef="222"/>
+    <object class="IBCarbonWindow" id="223">
+      <boolean name="receiveUpdates">FALSE</boolean>
+      <boolean name="liveResize">TRUE</boolean>
+      <boolean name="isConstrained">FALSE</boolean>
+      <int name="carbonWindowClass">3</int>
+      <int name="themeBrush">7</int>
+      <int name="windowPosition">1</int>
+      <string name="title">Window</string>
+      <object name="rootControl" class="IBCarbonRootControl" id="224">
+        <array count="2" name="subviews">
+          <object class="IBCarbonProgressBar" id="225">
+            <ostype name="controlSignature">LOAD</ostype>
+            <int name="controlID">128</int>
+            <boolean name="indeterminate">FALSE</boolean>
+            <int name="maximumValue">1000</int>
+            <string name="bounds">48 19 67 229 </string>
+          </object>
+          <reference idRef="226"/>
+        </array>
+        <string name="bounds">0 0 85 248 </string>
+      </object>
+      <string name="windowRect">390 300 475 548 </string>
+      <string name="ScreenRectAtEncodeTime">0 0 768 1024 </string>
+    </object>
+    <reference idRef="201"/>
+    <reference idRef="224"/>
+    <reference idRef="203"/>
+    <reference idRef="225"/>
+    <object class="IBCarbonRootControl" id="218">
+      <string name="bounds">0 0 512 1024 </string>
+    </object>
+    <object class="IBCarbonWindow" id="217">
+      <boolean name="liveResize">TRUE</boolean>
+      <int name="windowPosition">4</int>
+      <string name="title">Carbon OpenGL</string>
+      <reference name="rootControl" idRef="218"/>
+      <string name="windowRect">55 12 567 1036 </string>
+      <string name="ScreenRectAtEncodeTime">0 0 768 1024 </string>
+    </object>
+    <reference idRef="220"/>
+    <reference idRef="206"/>
+    <reference idRef="219"/>
+    <reference idRef="215"/>
+    <reference idRef="214"/>
+    <reference idRef="211"/>
+    <reference idRef="208"/>
+    <reference idRef="213"/>
+    <reference idRef="204"/>
+    <reference idRef="210"/>
+    <reference idRef="207"/>
+  </array>
+  <array count="26" name="allParents">
+    <reference idRef="213"/>
+    <reference idRef="1"/>
+    <reference idRef="200"/>
+    <reference idRef="208"/>
+    <reference idRef="224"/>
+    <reference idRef="202"/>
+    <reference idRef="201"/>
+    <reference idRef="202"/>
+    <reference idRef="1"/>
+    <reference idRef="200"/>
+    <reference idRef="223"/>
+    <reference idRef="202"/>
+    <reference idRef="224"/>
+    <reference idRef="217"/>
+    <reference idRef="1"/>
+    <reference idRef="202"/>
+    <reference idRef="202"/>
+    <reference idRef="202"/>
+    <reference idRef="213"/>
+    <reference idRef="213"/>
+    <reference idRef="209"/>
+    <reference idRef="200"/>
+    <reference idRef="212"/>
+    <reference idRef="202"/>
+    <reference idRef="209"/>
+    <reference idRef="202"/>
+  </array>
+  <dictionary count="4" name="nameTable">
+    <string>File&apos;s Owner</string>
+    <reference idRef="1"/>
+    <string>LoadingWindow</string>
+    <reference idRef="223"/>
+    <string>MainMenu</string>
+    <reference idRef="200"/>
+    <string>MainWindow</string>
+    <reference idRef="217"/>
+  </dictionary>
+  <string name="targetFramework">IBCarbonFramework</string>
+  <unsigned_int name="nextObjectID">227</unsigned_int>
+</object>
