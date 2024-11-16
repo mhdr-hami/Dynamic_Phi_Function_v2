@@ -23,7 +23,6 @@ PROJECTS = \
   gui \
   mapalgorithms \
   utils \
-  apps/arm \
   apps/witness \
   apps/snakebird \
   apps/airplane \
@@ -65,6 +64,7 @@ PROJECTS = \
   tests/graphics \
   papers/FMDH \
 #  generic \
+# apps/arm \
 
 
 
