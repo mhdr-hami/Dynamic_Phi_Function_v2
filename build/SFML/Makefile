@@ -23,16 +23,12 @@ PROJECTS = \
   gui \
   mapalgorithms \
   utils \
-  apps/witness \
-  apps/snakebird \
-  apps/airplane \
   apps/localsensingsearch \
   apps/pathsample \
   apps/puzzlesample \
   apps/mapUtils \
   apps/prediction \
   apps/emotion \
-  apps/hexagon \
   apps/3dmaps \
   apps/rubik \
   apps/bidirectional \
@@ -51,7 +47,6 @@ PROJECTS = \
   demos/astar \
   demos/idastar \
   demos/fastmap \
-  demos/pancake \
   demos/racetrack \
   demos/bidir \
   demos/multiTarget \
@@ -65,6 +60,11 @@ PROJECTS = \
   papers/FMDH \
 #  generic \
 # apps/arm \
+# apps/witness \
+#  apps/snakebird \
+#  apps/airplane \
+#  apps/hexagon \
+#  demos/pancake \
 
 
 
@@ -87,7 +87,6 @@ PROJECTS_ALL = \
   shared \
   simulation \
   utils \
-  apps/arm \
   apps/airplane \
   apps/localsensingsearch \
   apps/cpdb \
@@ -122,6 +121,7 @@ PROJECTS_ALL = \
   papers/DSDWA \
 #  papers/IBEX \
 #	apps/coprobber
+#  apps/arm \
 
 TESTS = \
 	tests/mnpuzzle \
