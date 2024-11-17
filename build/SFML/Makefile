@@ -43,6 +43,7 @@ PROJECTS = \
   tests/graphics \
   papers/FMDH \
   generic \
+  
 # apps/arm \
 # apps/witness \
 #  apps/snakebird \
