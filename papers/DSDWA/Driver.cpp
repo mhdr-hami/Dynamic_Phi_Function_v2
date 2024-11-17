@@ -26,7 +26,7 @@
 #include "STPInstances.h"
 
 int stepsPerFrame = 1;
-float bound = 3;
+float bound = 4;
 int problemNumber = 0;
 float testScale = 1.0;
 void GetNextWeightRange(float &minWeight, float &maxWeight, point3d currPoint, float nextSlope);

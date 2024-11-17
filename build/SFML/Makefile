@@ -42,7 +42,7 @@ PROJECTS = \
   tests/mnpuzzle \
   tests/graphics \
   papers/FMDH \
-#  generic \
+  generic \
 # apps/arm \
 # apps/witness \
 #  apps/snakebird \
