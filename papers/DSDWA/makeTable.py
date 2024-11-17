@@ -9,9 +9,9 @@ plt.rcParams["figure.figsize"] = [7.00, 7.00]
 plt.rcParams["legend.framealpha"] = 1.00
 ## Args: PythonAdrress Domain #Experiment #Policies #Weights DataAdrress
 
-# weight_to_int = {"1.50":0, "2.00":1, '3.00':2, '4.00':3, '5.00':4, '6.00':5, '7.00':6, '8.00':7, '9.00':8, '10.00':9}
-# weight_to_int = {"1.50":0, "2.00":1, "2.50":2, "3.00":3, "3.50":4, "4.00":5, "4.50":6, "5.00":7, "5.50":8, "6.00":9, "6.50":10, "7.00":11, "7.50":12, "8.00":13, "8.50":14, "9.00":15, "9.50":16, "10.00":17}
-weight_to_int = {"1.20":0, "1.40":1, "1.60":2, "1.80":3, "2.00":4, "2.20":5, "2.40":6, "2.60":7, "2.80":8, "3.00":9, "3.20":10, "3.40":11, "3.60":12, "3.80":13, "4.00":14, "4.20":15, "4.40":16, "4.60":17, "4.80":18, "5.00":19, "5.20":20, "5.40":21, "5.60":22, "5.80":23, "6.00":24, "6.20":25, "6.40":26, "6.60":27, "6.80":28, "7.00":29, "7.20":30, "7.40":31, "7.60":32, "7.80":33, "8.00":34, "8.20":35, "8.40":36, "8.60":37, "8.80":38, "9.00":39, "9.20":40, "9.40":41, "9.60":42, "9.80":43, "10.00":44}
+weight_to_num = {"1.50":0, "2.00":1, '3.00':2, '4.00':3, '5.00':4, '6.00':5, '7.00':6, '8.00':7, '9.00':8, '10.00':9}
+# weight_to_num = {"1.50":0, "2.00":1, "2.50":2, "3.00":3, "3.50":4, "4.00":5, "4.50":6, "5.00":7, "5.50":8, "6.00":9, "6.50":10, "7.00":11, "7.50":12, "8.00":13, "8.50":14, "9.00":15, "9.50":16, "10.00":17}
+# weight_to_num = {"1.20":0, "1.40":1, "1.60":2, "1.80":3, "2.00":4, "2.20":5, "2.40":6, "2.60":7, "2.80":8, "3.00":9, "3.20":10, "3.40":11, "3.60":12, "3.80":13, "4.00":14, "4.20":15, "4.40":16, "4.60":17, "4.80":18, "5.00":19, "5.20":20, "5.40":21, "5.60":22, "5.80":23, "6.00":24, "6.20":25, "6.40":26, "6.60":27, "6.80":28, "7.00":29, "7.20":30, "7.40":31, "7.60":32, "7.80":33, "8.00":34, "8.20":35, "8.40":36, "8.60":37, "8.80":38, "9.00":39, "9.20":40, "9.40":41, "9.60":42, "9.80":43, "10.00":44}
 
 cost='5.0'
 mapType = {0:'Obstacle Square', 1:'Swamped Square Cost='+cost, 2:'Obstacle Diamond', 3:'Swamped Diamond Cost='+cost, 4:'Obstacle Circle', 5:'Swamped Circle Cost='+cost, 6: sys.argv[5]+" Cost="+sys.argv[8]}
@@ -71,11 +71,11 @@ if sys.argv[1] == '-stp':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "STP" and (data[5] in list(weight_to_int.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
-                        table[int(data[3])][weight_to_int[data[5]]] += float(data[7])
-                        count_table[int(data[3])][weight_to_int[data[5]]] += 1
-                        TheDataSet[int(data[3])][weight_to_int[data[5]]].append(int(data[7]))
-                        # print(float(data[7]), count_table[int(data[3])][weight_to_int[data[5]]], sep=" ")
+                    if data[0] == "STP" and (data[5] in list(weight_to_num.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
+                        table[int(data[3])][weight_to_num[data[5]]] += float(data[7])
+                        count_table[int(data[3])][weight_to_num[data[5]]] += 1
+                        TheDataSet[int(data[3])][weight_to_num[data[5]]].append(int(data[7]))
+                        # print(float(data[7]), count_table[int(data[3])][weight_to_num[data[5]]], sep=" ")
 
         result = np.divide(table, count_table)
 
@@ -144,8 +144,8 @@ if sys.argv[1] == '-stp':
             works = []
             for policy in int_to_alg:
                 work_i = []
-                for w in list(weight_to_int.keys()):
-                    work_i.append(result[policy][weight_to_int[w]])
+                for w in list(weight_to_num.keys()):
+                    work_i.append(result[policy][weight_to_num[w]])
                 works.append(work_i)
             
             with open("./papers/DSDWA/results/"+sys.argv[5]+"_table1.txt", "w") as f:
@@ -271,10 +271,10 @@ if sys.argv[1] == '-stp':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "STP" and (data[5] in list(weight_to_int.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
-                        table[int(data[3])][weight_to_int[data[5]]] += float(data[7])
-                        count_table[int(data[3])][weight_to_int[data[5]]] += 1
-                        TheDataSet[int(data[3])][weight_to_int[data[5]]].append(int(data[7]))
+                    if data[0] == "STP" and (data[5] in list(weight_to_num.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
+                        table[int(data[3])][weight_to_num[data[5]]] += float(data[7])
+                        count_table[int(data[3])][weight_to_num[data[5]]] += 1
+                        TheDataSet[int(data[3])][weight_to_num[data[5]]].append(int(data[7]))
 
         result = np.divide(table, count_table)
 
@@ -286,8 +286,8 @@ if sys.argv[1] == '-stp':
         works = []
         for policy in int_to_alg:
             work_i = []
-            for w in list(weight_to_int.keys()):
-                work_i.append(result[policy][weight_to_int[w]])
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
             works.append(work_i)
         for policy in int_to_alg:
             ypoints = []
@@ -330,10 +330,10 @@ if sys.argv[1] == '-stp':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "STP" and (data[5] in list(weight_to_int.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
-                        table[int(data[3])][weight_to_int[data[5]]] += float(data[9])
-                        count_table[int(data[3])][weight_to_int[data[5]]] += 1
-                        TheDataSet[int(data[3])][weight_to_int[data[5]]].append(int(data[9]))
+                    if data[0] == "STP" and (data[5] in list(weight_to_num.keys())) and (int(data[3]) in list(int_to_alg.keys())) : #and data[3]!='0' and data[3]!='1' and data[3]!='6' and data[3]!='8': # and data[9]!='0':
+                        table[int(data[3])][weight_to_num[data[5]]] += float(data[9])
+                        count_table[int(data[3])][weight_to_num[data[5]]] += 1
+                        TheDataSet[int(data[3])][weight_to_num[data[5]]].append(int(data[9]))
 
         result = np.divide(table, count_table)
 
@@ -344,8 +344,8 @@ if sys.argv[1] == '-stp':
         works = []
         for policy in int_to_alg:
             work_i = []
-            for w in list(weight_to_int.keys()):
-                work_i.append(result[policy][weight_to_int[w]])
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
             works.append(work_i)
         for policy in int_to_alg:
             ypoints = []
@@ -388,10 +388,10 @@ elif sys.argv[1] == '-map':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "MAP" and (data[7] in list(weight_to_int.keys())) and (int(data[5]) in list(int_to_alg.keys())): #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
-                        table[int(data[5])][weight_to_int[data[7]]] += int(data[9])
-                        count_table[int(data[5])][weight_to_int[data[7]]] += 1
-                        TheDataSet[int(data[5])][weight_to_int[data[7]]].append(int(data[9]))
+                    if data[0] == "MAP" and (data[7] in list(weight_to_num.keys())) and (int(data[5]) in list(int_to_alg.keys())): #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[5])][weight_to_num[data[7]]] += int(data[9])
+                        count_table[int(data[5])][weight_to_num[data[7]]] += 1
+                        TheDataSet[int(data[5])][weight_to_num[data[7]]].append(int(data[9]))
 
         result = np.divide(table, count_table)
         print()
@@ -460,8 +460,8 @@ elif sys.argv[1] == '-map':
             works = []
             for policy in int_to_alg:
                 work_i = []
-                for w in list(weight_to_int.keys()):
-                    work_i.append(result[policy][weight_to_int[w]])
+                for w in list(weight_to_num.keys()):
+                    work_i.append(result[policy][weight_to_num[w]])
                 works.append(work_i)
             
             with open("./papers/DSDWA/results/"+sys.argv[5]+"_table1.txt", "w") as f:
@@ -616,23 +616,23 @@ elif sys.argv[1] == '-map':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "MAP" and (data[7] in list(weight_to_int.keys())) and (int(data[5]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
-                        table[int(data[5])][weight_to_int[data[7]]] += int(data[9])
-                        count_table[int(data[5])][weight_to_int[data[7]]] += 1
-                        TheDataSet[int(data[5])][weight_to_int[data[7]]].append(int(data[9]))
+                    if data[0] == "MAP" and (data[7] in list(weight_to_num.keys())) and (int(data[5]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[5])][weight_to_num[data[7]]] += int(data[9])
+                        count_table[int(data[5])][weight_to_num[data[7]]] += 1
+                        TheDataSet[int(data[5])][weight_to_num[data[7]]].append(int(data[9]))
 
         result = np.divide(table, count_table)
 
-        # Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
         # Weights = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
-        Weights = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8, 10.0]
+        # Weights = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8, 10.0]
         
         xpoints = np.array(Weights)
         works = []
         for policy in int_to_alg:
             work_i = []
-            for w in list(weight_to_int.keys()):
-                work_i.append(result[policy][weight_to_int[w]])
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
             works.append(work_i)
         for policy in int_to_alg:
             ypoints = []
@@ -654,7 +654,7 @@ elif sys.argv[1] == '-map':
         font = {'family':'serif','color':'darkred','size':12}
         plt.ylabel("Work", fontdict=font)
         plt.xlabel("Weights", fontdict=font)
-        plt.title(mapType[int(sys.argv[7])]+", Size="+str(sys.argv[6]))
+        plt.title(sys.argv[5])
         # plt.legend(fontsize="25")
         plt.xticks(xpoints) 
         plt.yscale('log')
@@ -663,7 +663,7 @@ elif sys.argv[1] == '-map':
         # plt.savefig(sys.argv[5]+"E4.pdf", format="pdf", bbox_inches="tight")
         plt.show()
     
-    ############################################################################################
+    ##############################################
     elif sys.argv[2] == '5':
         ##Experiment 5: Creates the solutionQuality/weight plot
         ##arg[3] is the number of algs and arg[4] is the number of weights
@@ -675,10 +675,10 @@ elif sys.argv[1] == '-map':
             for line in f:
                 data = line.split()
                 if(len(data)): ## To check for empy lines
-                    if data[0] == "MAP" and (data[7] in list(weight_to_int.keys())) and (int(data[5]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
-                        table[int(data[5])][weight_to_int[data[7]]] += float(data[11])
-                        count_table[int(data[5])][weight_to_int[data[7]]] += 1
-                        TheDataSet[int(data[5])][weight_to_int[data[7]]].append(float(data[11]))
+                    if data[0] == "MAP" and (data[7] in list(weight_to_num.keys())) and (int(data[5]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[5])][weight_to_num[data[7]]] += float(data[11])
+                        count_table[int(data[5])][weight_to_num[data[7]]] += 1
+                        TheDataSet[int(data[5])][weight_to_num[data[7]]].append(float(data[11]))
 
         result = np.divide(table, count_table)
         # Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
@@ -688,8 +688,8 @@ elif sys.argv[1] == '-map':
         works = []
         for policy in int_to_alg:
             work_i = []
-            for w in list(weight_to_int.keys()):
-                work_i.append(result[policy][weight_to_int[w]])
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
             works.append(work_i)
         for policy in int_to_alg:
             ypoints = []
@@ -718,4 +718,178 @@ elif sys.argv[1] == '-map':
         # plt.yscale('log')
         # plt.xscale('log')
         plt.savefig(sys.argv[5]+"E5.pdf", format="pdf", bbox_inches="tight")
+        plt.show()
+    ##############################################
+    elif sys.argv[2] == '6':
+        
+        ##Experiment 6.0: Creates the work/weight plot
+        ##arg[3] is the number of algs and arg[4] is the number of weights
+        table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        count_table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        TheDataSet = [[[] for _ in range(int(sys.argv[4]))] for _ in range(int(sys.argv[3]))]
+
+        with open("./papers/DSDWA/results/"+sys.argv[5]+".txt", "r") as f:
+            for line in f:
+                data = line.split()
+                if(len(data)): ## To check for empy lines
+                    if data[0] == "Time" and (data[9] in list(weight_to_num.keys())) and (int(data[7]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[7])][weight_to_num[data[9]]] += int(data[11])
+                        count_table[int(data[7])][weight_to_num[data[9]]] += 1
+                        TheDataSet[int(data[7])][weight_to_num[data[9]]].append(int(data[11]))
+
+        result = np.divide(table, count_table)
+
+        Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        # Weights = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+        # Weights = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8, 10.0]
+        
+        xpoints = np.array(Weights)
+        works = []
+        for policy in int_to_alg:
+            work_i = []
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
+            works.append(work_i)
+        for policy in int_to_alg:
+            ypoints = []
+            for i in works[policy]:
+                ypoints.append(i)
+            ypoints = np.array(ypoints)
+
+            if int_to_alg[policy]!='DWP' and int_to_alg[policy]!='MAP':
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy], alpha=0.5)
+            else:
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy])
+            
+            if showErrorBar:
+                for w in range(len(xpoints)):
+                    d = np.array(TheDataSet[policy][w])
+                    l, u = st.norm.interval(confidence=0.95, loc=np.mean(d), scale=st.sem(d))
+                    plt.errorbar(x=xpoints[w], y=ypoints[w], yerr=[[np.mean(d)-l], [u-np.mean(d)]], color=colours[policy], capsize=8)
+            
+        font = {'family':'serif','color':'darkred','size':12}
+        plt.ylabel("Work", fontdict=font)
+        plt.xlabel("Weights", fontdict=font)
+        plt.title(sys.argv[5])
+        # plt.legend(fontsize="25")
+        plt.xticks(xpoints) 
+        plt.yscale('log')
+        # plt.xscale('log')
+        plt.grid(axis='y', color='0.80', which='major')
+        # plt.savefig(sys.argv[5]+"E4.pdf", format="pdf", bbox_inches="tight")
+        plt.show()
+
+
+        ##Experiment 6.1: Creates the RunTimePerNode/weight plot
+        ##arg[3] is the number of algs and arg[4] is the number of weights
+        table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        count_table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        TheDataSet = [[[] for _ in range(int(sys.argv[4]))] for _ in range(int(sys.argv[3]))]
+
+        with open("./papers/DSDWA/results/"+sys.argv[5]+".txt", "r") as f:
+            for line in f:
+                data = line.split()
+                if(len(data)): ## To check for empy lines
+                    if data[0] == "Time" and (data[9] in list(weight_to_num.keys())) and (int(data[7]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[7])][weight_to_num[data[9]]] += float(data[13])
+                        count_table[int(data[7])][weight_to_num[data[9]]] += 1
+                        TheDataSet[int(data[7])][weight_to_num[data[9]]].append(float(data[13]))
+
+        result = np.divide(table, count_table)
+
+        Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        # Weights = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+        # Weights = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8, 10.0]
+        
+        xpoints = np.array(Weights)
+        works = []
+        for policy in int_to_alg:
+            work_i = []
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
+            works.append(work_i)
+        for policy in int_to_alg:
+            ypoints = []
+            for i in works[policy]:
+                ypoints.append(i)
+            ypoints = np.array(ypoints)
+
+            if int_to_alg[policy]!='DWP' and int_to_alg[policy]!='MAP':
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy], alpha=0.5)
+            else:
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy])
+            
+            if showErrorBar:
+                for w in range(len(xpoints)):
+                    d = np.array(TheDataSet[policy][w])
+                    l, u = st.norm.interval(confidence=0.95, loc=np.mean(d), scale=st.sem(d))
+                    plt.errorbar(x=xpoints[w], y=ypoints[w], yerr=[[np.mean(d)-l], [u-np.mean(d)]], color=colours[policy], capsize=8)
+            
+        font = {'family':'serif','color':'darkred','size':12}
+        plt.ylabel("RunTime per Node", fontdict=font)
+        plt.xlabel("Weights", fontdict=font)
+        plt.title(sys.argv[5])
+        # plt.legend(fontsize="25")
+        plt.xticks(xpoints) 
+        plt.yscale('log')
+        # plt.xscale('log')
+        plt.grid(axis='y', color='0.80', which='major')
+        # plt.savefig(sys.argv[5]+"E4.pdf", format="pdf", bbox_inches="tight")
+        plt.show()
+
+        ##Experiment 6.2: Creates the TotalRunTime/weight plot
+        ##arg[3] is the number of algs and arg[4] is the number of weights
+        table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        count_table = np.zeros((int(sys.argv[3]), int(sys.argv[4])))
+        TheDataSet = [[[] for _ in range(int(sys.argv[4]))] for _ in range(int(sys.argv[3]))]
+
+        with open("./papers/DSDWA/results/"+sys.argv[5]+".txt", "r") as f:
+            for line in f:
+                data = line.split()
+                if(len(data)): ## To check for empy lines
+                    if data[0] == "Time" and (data[9] in list(weight_to_num.keys())) and (int(data[7]) in list(int_to_alg.keys())) : #and data[5]!='0' and data[5]!='1' and data[5]!='6' and data[5]!='8':# and data[9]!='0':
+                        table[int(data[7])][weight_to_num[data[9]]] += float(data[15])
+                        count_table[int(data[7])][weight_to_num[data[9]]] += 1
+                        TheDataSet[int(data[7])][weight_to_num[data[9]]].append(float(data[15]))
+
+        result = np.divide(table, count_table)
+
+        Weights = [1.5, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        # Weights = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10.0]
+        # Weights = [1.2, 1.4, 1.6, 1.8, 2.0, 2.2, 2.4, 2.6, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.2, 4.4, 4.6, 4.8, 5.0, 5.2, 5.4, 5.6, 5.8, 6.0, 6.2, 6.4, 6.6, 6.8, 7.0, 7.2, 7.4, 7.6, 7.8, 8.0, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2, 9.4, 9.6, 9.8, 10.0]
+        
+        xpoints = np.array(Weights)
+        works = []
+        for policy in int_to_alg:
+            work_i = []
+            for w in list(weight_to_num.keys()):
+                work_i.append(result[policy][weight_to_num[w]])
+            works.append(work_i)
+        for policy in int_to_alg:
+            ypoints = []
+            for i in works[policy]:
+                ypoints.append(i)
+            ypoints = np.array(ypoints)
+
+            if int_to_alg[policy]!='DWP' and int_to_alg[policy]!='MAP':
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy], alpha=0.5)
+            else:
+                plt.plot(xpoints, ypoints, linestyle=linestyles[list(linestyles.keys())[5]], linewidth = '2.5', marker=markers[policy], ms='10', markeredgecolor="k", label=int_to_alg[policy], color=colours[policy])
+            
+            if showErrorBar:
+                for w in range(len(xpoints)):
+                    d = np.array(TheDataSet[policy][w])
+                    l, u = st.norm.interval(confidence=0.95, loc=np.mean(d), scale=st.sem(d))
+                    plt.errorbar(x=xpoints[w], y=ypoints[w], yerr=[[np.mean(d)-l], [u-np.mean(d)]], color=colours[policy], capsize=8)
+            
+        font = {'family':'serif','color':'darkred','size':12}
+        plt.ylabel("TotalRunTime", fontdict=font)
+        plt.xlabel("Weights", fontdict=font)
+        plt.title(sys.argv[5])
+        # plt.legend(fontsize="25")
+        plt.xticks(xpoints) 
+        plt.yscale('log')
+        # plt.xscale('log')
+        plt.grid(axis='y', color='0.80', which='major')
+        # plt.savefig(sys.argv[5]+"E4.pdf", format="pdf", bbox_inches="tight")
         plt.show()
