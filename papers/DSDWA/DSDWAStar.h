@@ -12,24 +12,24 @@ enum tExpansionPriority {
     kXDP=3,
     kXUP=4,
     DWP=5,
-    MAP=7,
-    kHalfEdgeDrop=6,
+    MAP=6,
+    kHalfEdgeDrop=7,
     kGreedy=8,
     kDSDPolicyCount=9,
 };
 
-double table_step=0.5;
-
+double table_step=2.0;
 template <class state, class action, class environment, class openList = AStarOpenClosed<state, AStarCompareWithF<state>, AStarOpenClosedDataWithF<state>> >
 class DSDWAStar : public GenericSearchAlgorithm<state,action,environment> {
 public:
     DSDWAStar() {
         ResetNodeCount(); env = 0; stopAfterGoal = true; weight=1; reopenNodes = false; theHeuristic = 0;
-        theConstraint = 0; last_in_lookup=0;
+        theConstraint = 0;
     }
     virtual ~DSDWAStar() {}
     void GetPath(environment *env, const state& from, const state& to, std::vector<state> &thePath);
-    float GetPath_v3(environment *env, const state& from, const state& to, std::vector<state> &thePath);
+    void GetPath_v2(environment *env, const state& from, const state& to, std::vector<state> &thePath);
+    // float GetPath_v2(environment *env, const state& from, const state& to, std::vector<state> &thePath);
     void GetPath(environment *, const state&, const state&, std::vector<action> & );
     
     openList openClosedList;
@@ -37,10 +37,8 @@ public:
     
     bool InitializeSearch(environment *env, const state& from, const state& to, std::vector<state> &thePath);
     bool InitializeSearch_v2(environment *env, const state& from, const state& to, std::vector<state> &thePath);
-    bool InitializeSearch_v3(environment *env, const state& from, const state& to, std::vector<state> &thePath);
     bool DoSingleSearchStep(std::vector<state> &thePath);
     bool DoSingleSearchStep_v2(std::vector<state> &thePath);
-    bool DoSingleSearchStep_v3(std::vector<state> &thePath);
     void AddAdditionalStartState(state& newState);
     void AddAdditionalStartState(state& newState, double cost);
     
@@ -60,7 +58,7 @@ public:
     uint64_t GetUniqueNodesExpanded() { return uniqueNodesExpanded; }
     void ResetNodeCount() {
         nodesExpanded = nodesTouched = 0;
-        uniqueNodesExpanded = 0; firstLast=0; secondLast=0; thirdLast=0; last_in_lookup=0;
+        uniqueNodesExpanded = 0; firstLast=0; secondLast=0; thirdLast=0;
     }
     int GetMemoryUsage();
     bool GetClosedListGCost(const state &val, double &gCost) const;
@@ -96,7 +94,6 @@ public:
     
     void DrawPriorityGraph(Graphics::Display &disp) const;
     void DrawPriorityGraph_v2(Graphics::Display &disp) const;
-    void DrawPriorityGraph_v3(Graphics::Display &disp) const;
     
     double Phi(double h, double g)
     {
@@ -115,8 +112,8 @@ public:
         }
         else return GetPriority(h, g);
     }
-
-    // This is a new version that uses an unordered_map lookup table.
+    
+    // This is a new version that uses a vector lookup table
     double Phi_v2(double h, double g)
     {
         if (policy == kXDP)
@@ -132,26 +129,7 @@ public:
                 return nextF;
                 
         }
-        else return GetPriority_v2(h, g);
-    }
-    
-    // This is a new version that uses a vector lookup table
-    double Phi_v3(double h, double g)
-    {
-        if (policy == kXDP)
-        {
-                float nextF = (g+(2*weight-1)*h+sqrt((g-h)*(g-h)+4*weight*g*h))/(2*weight);
-
-                return nextF;
-                
-        }
-        if (policy == kXUP)
-        {
-                float nextF = (g+h+sqrt((g+h)*(g+h)+4*weight*(weight-1)*h*h))/(2*weight);
-                return nextF;
-                
-        }
-        return GetPriority_v3(h, g);
+        return GetPriority_v2(h, g);
     }
     
     void SetWeight(double w)
@@ -192,56 +170,9 @@ public:
     * Returns the current the priority of a state given its h anf g values.
     * Iterates through the data, to find the region that covers the slope (g/h) of the given state.
     * @param h and @param g The h and g values of the state
-    * This is a new version that uses an unordered_map lookup table.
-    **/
-    float GetPriority_v2(float h, float g)
-    {
-        if (look_up_table.size() == 0)
-        {
-            if (fequal(g, 0))
-                return h;
-            printf("WARNING: Invalid priority lookups %s line %d - code 0\n", __FILE__, __LINE__);
-            return INFINITY;
-        }
-        // if(fequal(h, 0)) return look_up_table[INFINITY].K*(g + look_up_table[-1].weight * h);
-        if(fequal(h, 0)) return look_up_table[90].K*(g + look_up_table[90].weight * h);
-
-        float slope = g/h;
-        float angle = atan2f(g, h)/PID180;
-        double rounded_angle;
-        for(double i=floor(angle); i<=ceil(angle); i+=table_step){
-            if(i<=angle && angle <= i+table_step){
-                if(angle-i <= i+table_step-angle){
-                    rounded_angle = i;
-                    break;
-                }
-                else{
-                    rounded_angle = i+table_step;
-                    break;
-                }
-            }
-        }
-
-        // if (fgreater(ceil(angle), last_in_lookup))
-        if (fgreater(rounded_angle, last_in_lookup))
-        {
-            printf("WARNING: Invalid priority lookups %s line %d - code 1\n", __FILE__, __LINE__);
-            // std::cout<<"Code 1: last_in_lookup: "<<last_in_lookup<<" | ceil(angle): "<<ceil(angle)<<"\n";
-            std::cout<<"Code 1: last_in_lookup: "<<last_in_lookup<<" | rounded_angle: "<<rounded_angle<<"\n";
-            return INFINITY;
-        }
-        
-        // return look_up_table[ceil(angle)].K*(g + look_up_table[ceil(angle)].weight * h);
-        return look_up_table[rounded_angle].K*(g + look_up_table[rounded_angle].weight * h);
-    }
-    
-    /**
-    * Returns the current the priority of a state given its h anf g values.
-    * Iterates through the data, to find the region that covers the slope (g/h) of the given state.
-    * @param h and @param g The h and g values of the state
     * This is a new version that uses a vector lookup table
     **/
-    float GetPriority_v3(float h, float g)
+    float GetPriority_v2(float h, float g)
     {
         if (LookUpVector.size() == 1)
         {
@@ -256,7 +187,7 @@ public:
         float slope = g/h;
         float angle = atan2f(g, h)/PID180;
         int rounded_angle = int(angle*(1/table_step));
-        int next_angle = LookUpVector.size();
+        long long int next_angle = LookUpVector.size();
 
         if (fgreater(rounded_angle, next_angle-1))
         {
@@ -344,89 +275,8 @@ public:
 
     // directly target next suboptimality
     // sets the targetWeight to the region that these new h ang g values create (if they do)
-    // This is a new version that uses an unordered_map lookup table, instead of data (vector + linear scan)
-    void SetNextWeight_v2(float h, float g, float targetWeight) // const Graphics::point &loc
-    {
-        if (fequal(h, 0))
-        {
-            float w;
-            point3d last;
-            if (look_up_table.size() > 0)
-                 last = look_up_table[last_in_lookup].crossPoint;
-            else
-                last = {1, 0};
-            w = (weight-last.y)/last.x;
-            // connect to y axis at bound*(1)
-            float K = 1/(last.y+w*last.x);
-            // look_up_table[INFINITY] = {w, K, {static_cast<float>(weight), 0.0f}};
-            look_up_table[90] = {w, K, {static_cast<float>(weight), 0.0f}};
-        }
-        if (fgreater(h, 0) && fgreater(g, 0))
-        {
-            float slope = g/h;
-            float angle = atan2f(g, h)/PID180;
-            double rounded_angle;
-            for(double i=floor(angle); i<=ceil(angle); i+=table_step){
-                if(i<=angle && angle <= i+table_step){
-                    if(angle-i <= i+table_step-angle){
-                        rounded_angle = i;
-                        break;
-                    }
-                    else{
-                        rounded_angle = i+table_step;
-                        break;
-                    }
-                }
-            }
-            // if (look_up_table.size() == 0 || fless(last_in_lookup, ceil(angle))){
-            if (look_up_table.size() == 0 || fless(last_in_lookup, rounded_angle)){
-                float minWeight, maxWeight;
-                if (look_up_table.size() > 0)
-                    GetNextWeightRange(minWeight, maxWeight, look_up_table[last_in_lookup].crossPoint, slope);
-                else
-                    GetNextWeightRange(minWeight, maxWeight, {1, 0}, slope);
-
-                float K;
-                float nextWeight = std::min(maxWeight, std::max(minWeight, targetWeight));
-                point3d last;
-                if (look_up_table.size() == 0)
-                {
-                    last = point3d(1, 0);
-                }
-                else {
-                    last = look_up_table[last_in_lookup].crossPoint;
-                }
-                K = 1/(last.y+nextWeight*last.x);
-
-                // our cross point of next slope
-                point3d crossPoint1;
-                crossPoint1.x = 1.0f/(K*(slope+nextWeight));
-                crossPoint1.y = crossPoint1.x*slope;
-                
-                // loop through all slopes between last in lookup and slope and define all of them with nextWeight
-                // for (double i = last_in_lookup+1; i<= ceil(angle); i++){
-                //     look_up_table[i] = {nextWeight, K, crossPoint1};
-                // }
-                for (double i = last_in_lookup+table_step; i<= rounded_angle; i+=table_step){
-                    look_up_table[i] = {nextWeight, K, crossPoint1};
-                }
-
-                // std::cout<<"last_in_lookup: "<<last_in_lookup<<" | ceil(angle): "<<ceil(angle)<<"| nextWeight: "<<nextWeight<<"\n";
-
-                // Update the last in lookup to the new slope
-                // last_in_lookup = ceil(angle);
-                last_in_lookup = rounded_angle;
-            }
-            else{
-                std::cout<<"Error code 3!\n";
-            }
-        }
-    }
-
-    // directly target next suboptimality
-    // sets the targetWeight to the region that these new h ang g values create (if they do)
     // This is a new version that uses a vector lookup table
-    void SetNextWeight_v3(float h, float g, float targetWeight) // const Graphics::point &loc
+    void SetNextWeight_v2(float h, float g, float targetWeight) // const Graphics::point &loc
     {
         float slope = g/h;
         float angle = atan2f(g, h)/PID180;
@@ -586,128 +436,10 @@ public:
             }
         }
     }
-
-    //using a target priority value, sets the w_i for the new region.
-    //this one uses the lookup table
-    void SetNextPriority_v2(float h, float g, float target) // const Graphics::point &loc
-    {
-        if (fequal(h, 0))
-        {
-            float w;
-            point3d last;
-            if (look_up_table.size() > 0)
-                 last = look_up_table[last_in_lookup].crossPoint;
-            else
-                last = {1, 0};
-            w = (weight-last.y)/last.x;
-            // connect to y axis at bound*(1)
-            float K = 1/(last.y+w*last.x);
-            // look_up_table[INFINITY] = {w, K, {static_cast<float>(weight), 0.0f}};
-            look_up_table[90] = {w, K, {static_cast<float>(weight), 0.0f}};
-
-        }
-        if (fgreater(h, 0) && fgreater(g, 0))
-        {
-            float slope = g/h;
-            float angle = atan2f(g, h)/PID180;
-            double rounded_angle;
-            for(double i=floor(angle); i<=ceil(angle); i+=table_step){
-                if(i<=angle && angle <= i+table_step){
-                    if(angle-i <= i+table_step-angle){
-                        rounded_angle = i;
-                        break;
-                    }
-                    else{
-                        rounded_angle = i+table_step;
-                        break;
-                    }
-                }
-            }
-            // if (look_up_table.size() == 0 || fless(last_in_lookup, ceil(angle)))
-            if (look_up_table.size() == 0 || fless(last_in_lookup, rounded_angle))
-            {
-                //std::cout << "Virtual hit of " << loc << " slope " << slope << "\n";
-                float minWeight, maxWeight;
-                if (look_up_table.size() > 0)
-                    GetNextWeightRange(minWeight, maxWeight, look_up_table[last_in_lookup].crossPoint, slope);
-                else
-                    GetNextWeightRange(minWeight, maxWeight, {1, 0}, slope);
-                
-                float K;
-                float nextWeight;
-                point3d last;
-                if (look_up_table.size() == 0)
-                {
-                    last = point3d(1, 0);
-                }
-                else {
-                    last = look_up_table[last_in_lookup].crossPoint;
-                }
-
-                
-                switch (policy)
-                {
-                    case kWA: // Weighted A*
-                    {
-                        K = 1/weight;
-                        nextWeight = weight;
-                        break;
-                    }
-                    case kpwXU: // PWXUP
-                    {
-                        nextWeight = maxWeight;
-                        K = 1/(last.y+nextWeight*last.x);
-                        break;
-                    }
-                    case kpwXD: // PWXDP
-                    {
-                        nextWeight = minWeight;
-                        K = 1/(last.y+nextWeight*last.x);
-                        break;
-                    }
-                    default:
-                    // case kGreedy:
-                    {
-                        // K (g + [w] * h) = 1 at previous point
-                        // returns nextWeight and K
-                        nextWeight = ChooseWeightForTargetPriority({h, g}, target, minWeight, maxWeight, last, K);
-                    }
-                }
-                
-
-                // our cross point of next slope
-                point3d crossPoint1;
-                crossPoint1.x = 1.0f/(K*(slope+nextWeight));
-                crossPoint1.y = crossPoint1.x*slope;
-                
-                // loop through all slopes between last in lookup and slope and define all of them with nextWeight
-                // for (double i = last_in_lookup+1; i<= ceil(angle); i++){
-                //     look_up_table[i] = {nextWeight, K, crossPoint1};
-                // }
-                for (double i = last_in_lookup+table_step; i<= rounded_angle; i+=table_step){
-                    look_up_table[i] = {nextWeight, K, crossPoint1};
-                }
-
-                // std::cout<<"last_in_lookup: "<<last_in_lookup<<" | ceil(angle): "<<ceil(angle)<<"| nextWeight: "<<nextWeight<<"\n";
-
-                // Update the last in lookup to the new slope
-                // last_in_lookup = ceil(angle);
-                last_in_lookup = rounded_angle;
-                
-    //            std::cout << "Cross Priorities: ";
-    //            for (const auto &i : data)
-    //            {
-    //                std::cout << i.crossPoint << ": ";
-    //                std::cout << GetPriority(i.crossPoint.x, i.crossPoint.y) << " ";
-    //            }
-    //            std::cout << "\n";
-            }
-        }
-    }
     
     //using a target priority value, sets the w_i for the new region.
     // This is a new version that uses a vector lookup table
-    void SetNextPriority_v3(float h, float g, float target) // const Graphics::point &loc
+    void SetNextPriority_v2(float h, float g, float target) // const Graphics::point &loc
     {
         float slope = g/h;
         float angle = atan2f(g, h)/PID180;
@@ -827,21 +559,6 @@ public:
         
     }
 
-    /**
-     * Given the slope of the next bounding line, give the possbile range of weights that can be used in the priority function
-     *
-     * \param minWeight (returned) The minimum weight that can be used without going under the lower limit
-     * \param maxWeight (returned) The maximum weight that can be used without going over the upper limit
-     * This is a new version that uses a lookup table, instead of data.
-     **/
-    void GetNextWeightRange_v2(float &minWeight, float &maxWeight, float nextSlope)
-    {
-        if (look_up_table.size() > 0)
-            GetNextWeightRange(minWeight, maxWeight, look_up_table[last_in_lookup].crossPoint, nextSlope);
-        else
-            GetNextWeightRange(minWeight, maxWeight, {1, 0}, nextSlope);
-        
-    }
 
     /**
      * Given the slope of the next bounding line, give the possbile range of weights that can be used in the priority function
@@ -850,7 +567,7 @@ public:
      * \param maxWeight (returned) The maximum weight that can be used without going over the upper limit
      * // This is a new version that uses a vector lookup table
      **/
-    void GetNextWeightRange_v3(float &minWeight, float &maxWeight, float nextSlope)
+    void GetNextWeightRange_v2(float &minWeight, float &maxWeight, float nextSlope)
     {
         if (LookUpVector.size() > 1)
             GetNextWeightRange(minWeight, maxWeight, LookUpVector.back().crossPoint, nextSlope);
@@ -976,10 +693,9 @@ private:
         float K;
         point3d crossPoint; // cached for simplicity
     };
-    std::unordered_map<double, DSDdata_v2> look_up_table;
-    double last_in_lookup;
 
     std::vector<DSDdata_v2> LookUpVector;
+    
 };
 
 /**
@@ -1031,60 +747,27 @@ void DSDWAStar<state,action,environment,openList>::GetPath(environment *_env, co
  * @param to The goal state
  * @param thePath A vector of states which will contain an optimal path
  * between from and to when the function returns, if one exists.
- * This is a new version: 1-it uses the lookup table, 2-it returns average time per node.
+ * This is a new version: -- it uses the lookup table
  */
 template <class state, class action, class environment, class openList>
-float DSDWAStar<state,action,environment,openList>::GetPath_v3(environment *_env, const state& from, const state& to, std::vector<state> &thePath)
+void DSDWAStar<state,action,environment,openList>::GetPath_v2(environment *_env, const state& from, const state& to, std::vector<state> &thePath)
 {
-    // if (!InitializeSearch_v3(_env, from, to, thePath))
-    // {
-    //     return 0.0;
-    // }
-    // // keeps doing single search step, which is expansion of one node, and adding its successors to open
-    // // until the solution is found or open is empty.
-    // float average_time_per_node = 0;
-    // clock_t start_time, end_time;
-    // start_time = clock();
-    // while (!DoSingleSearchStep_v3(thePath))
-    // {
-    //     end_time = clock();
-    //     float runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-    //     average_time_per_node += runningTime;
-    //     if (10000000 == nodesExpanded){
-    //         //Terminate the search after 10 million node expansions.
-    //         printf("%" PRId64 " nodes expanded, %" PRId64 " generated. ", nodesExpanded, nodesTouched);
-    //         std::cout<<"Policy "<<policy<<" => Terminated.\n";
-    //         break;
-    //     }
-    //     start_time = clock();
-    // }
-    // average_time_per_node = average_time_per_node / nodesExpanded;
-    // return average_time_per_node;
-
-    if (!InitializeSearch(_env, from, to, thePath))
+    if (!InitializeSearch_v2(_env, from, to, thePath))
     {
-        return 0.0;
+        return;
     }
     // keeps doing single search step, which is expansion of one node, and adding its successors to open
     // until the solution is found or open is empty.
-    float average_time_per_node = 0;
-    clock_t start_time, end_time;
-    start_time = clock();
-    while (!DoSingleSearchStep(thePath))
+    while (!DoSingleSearchStep_v2(thePath))
     {
-        end_time = clock();
-        float runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-        average_time_per_node += runningTime;
         if (10000000 == nodesExpanded){
             //Terminate the search after 10 million node expansions.
             printf("%" PRId64 " nodes expanded, %" PRId64 " generated. ", nodesExpanded, nodesTouched);
             std::cout<<"Policy "<<policy<<" => Terminated.\n";
             break;
         }
-        start_time = clock();
     }
-    average_time_per_node = average_time_per_node / nodesExpanded;
-    return average_time_per_node;
+
 }
 
 template <class state, class action, class environment, class openList>
@@ -1130,43 +813,6 @@ bool DSDWAStar<state,action,environment,openList>::InitializeSearch(environment 
 
     double h = theHeuristic->HCost(start, goal);
     openClosedList.AddOpenNode(start, env->GetStateHash(start), Phi(h, 0), 0, h);
-
-    env->SetqueuePiviotState(start);
-    env->SetPiviotState();
-    
-    return true;
-}
-
-/**
- * Initialize the A* search
- * @param _env The search environment
- * @param from The start state
- * @param to The goal state
- * @return TRUE if initialization was successful, FALSE otherwise
- * This one uses a lookup table instead of the vector + linear scan
- */
-template <class state, class action, class environment, class openList>
-bool DSDWAStar<state,action,environment,openList>::InitializeSearch_v2(environment *_env, const state& from, const state& to, std::vector<state> &thePath)
-{
-    if (theHeuristic == 0)
-        theHeuristic = _env;
-    thePath.resize(0);
-    env = _env;
-    openClosedList.Reset(env->GetMaxHash());
-    ResetNodeCount();
-    start = from;
-    goal = to;
-    if (env->GoalTest(from, to) && (stopAfterGoal)) //assumes that from and to are valid states
-    {
-        return false;
-    }
-    look_up_table.clear();
-
-    double h = theHeuristic->HCost(start, goal);
-    openClosedList.AddOpenNode(start, env->GetStateHash(start), Phi_v2(h, 0), 0, h);
-
-    env->SetqueuePiviotState(start);
-    env->SetPiviotState();
     
     return true;
 }
@@ -1180,7 +826,7 @@ bool DSDWAStar<state,action,environment,openList>::InitializeSearch_v2(environme
  * This is a new version that uses a vector lookup table
  */
 template <class state, class action, class environment, class openList>
-bool DSDWAStar<state,action,environment,openList>::InitializeSearch_v3(environment *_env, const state& from, const state& to, std::vector<state> &thePath)
+bool DSDWAStar<state,action,environment,openList>::InitializeSearch_v2(environment *_env, const state& from, const state& to, std::vector<state> &thePath)
 {
     if (theHeuristic == 0)
         theHeuristic = _env;
@@ -1204,10 +850,7 @@ bool DSDWAStar<state,action,environment,openList>::InitializeSearch_v3(environme
 
 
     double h = theHeuristic->HCost(start, goal);
-    openClosedList.AddOpenNode(start, env->GetStateHash(start), Phi_v3(h, 0), 0, h);
-
-    env->SetqueuePiviotState(start);
-    env->SetPiviotState();
+    openClosedList.AddOpenNode(start, env->GetStateHash(start), Phi_v2(h, 0), 0, h);
     
     return true;
 }
@@ -1366,9 +1009,6 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep(std::vecto
                     float minWeight, maxWeight, midWeight, lowMidWeight, highMidWeight;
                     GetNextWeightRange(minWeight, maxWeight, maxSlope);
 
-                    // maxWeight = MAXFLOAT;
-
-
                     midWeight = (maxWeight + minWeight)/2;
                     lowMidWeight = (midWeight + minWeight)/2;
                     highMidWeight = (maxWeight + midWeight)/2;
@@ -1392,7 +1032,15 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep(std::vecto
                         wma_N = 0;
 
                     float TheNextWeight = lowMidWeight + (highMidWeight-lowMidWeight)*wma_N;
+//                    float TheNextWeight = minWeight + (maxWeight-minWeight)*wma_N;
                     
+//                    float minWeight, maxWeight, midWeight, lowMidWeight, highMidWeight;
+//                    GetNextWeightRange(minWeight, maxWeight, maxSlope);
+//                    
+//                    double MT = ((secondLast - firstLast) + (thirdLast - secondLast))/(std::abs(double((secondLast - firstLast))) + std::abs(double(thirdLast - secondLast)));
+//                    
+//                    float TheNextWeight = minWeight + (maxWeight-minWeight)*(1-(MT+1)/2);
+//                    
                     SetNextWeight(maxSlopeH, maxSlopeG, TheNextWeight);
 
                     thirdLast = secondLast;
@@ -1501,12 +1149,14 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep(std::vecto
     return false;
 }
 
+
 /**
  * Expand a single node, add successors to open
  * @param thePath will contain an optimal path from start to goal if the
  * function returns TRUE
  * @return TRUE if there is no path or if we have found the goal, FALSE
  * otherwise
+ * This is a new version that uses a vector lookup table
  */
 template <class state, class action, class environment, class openList>
 bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v2(std::vector<state> &thePath)
@@ -1617,25 +1267,71 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v2(std::ve
                 //assigns new weight, based on the number of node expansions of the previous regions.
                 //assigns smaller weights, if the search is progressive and
                 // most of the recent node expansions were in the most recent created region.
-
+                
                 //CHECK THE SLOPE OF THE EXPANDED NODE TO SEE WHICH REGION IT WAS FROM.
                 //ADD ONE TO THE NUMBER OF THAT REGION.
-                float nodeSlope = openClosedList.Lookup(nodeid).g/openClosedList.Lookup(nodeid).h;
-                float wma_N;
-                if(data.size()>=3)
+                float minWeight, maxWeight;
+                GetNextWeightRange_v2(minWeight, maxWeight, maxSlope);
+                float angle = atan2f(maxSlopeG,maxSlopeH)/PID180;
+                int rounded_angle = int(angle*(1/table_step));
+                int next_angle = LookUpVector.size();
+                
+                if(next_angle>=3)
                 {
-                    if(nodeSlope <= data[data.size()-3].slope)
+                    double prev_angle = (next_angle-1)/(1/table_step);
+                    // double prev_slope = std::tan(prev_angle* PID180);
+                    double prev_slope = tan(prev_angle* PID180);
+                    // double prev_slope = tanTable[(prev_angle)];
+
+                    double second_prev_angle = (next_angle-2)/(1/table_step);
+                    // double second_prev_slope = std::tan(second_prev_angle* PID180);
+                    double second_prev_slope = tan(second_prev_angle* PID180);
+                    // double second_prev_slope = tanTable[(second_prev_angle)];
+
+                    double third_prev_angle = (next_angle-3)/(1/table_step);
+                    // double third_prev_slope = std::tan(third_prev_angle* PID180);
+                    double third_prev_slope = tan(third_prev_angle* PID180);
+                    // double third_prev_slope = tanTable[(third_prev_angle)];
+                    
+//                        if(nodeSlope <= third_prev_slope)
+//                            thirdLast += 1;
+//                        else if(nodeSlope <= second_prev_slope)
+//                            secondLast += 1;
+//                        else if(nodeSlope <= prev_slope)
+//                            firstLast += 1;
+                    if(maxSlope <= third_prev_slope)
                         thirdLast += 1;
-                    else if(nodeSlope <= data[data.size()-2].slope)
+                    else if(maxSlope <= second_prev_slope)
                         secondLast += 1;
-                    else if(nodeSlope <= data[data.size()-1].slope)
+                    else if(maxSlope <= prev_slope)
                         firstLast += 1;
                 }
-                if(fgreater(maxSlope, data.back().slope) || data.size() == 0){
-                    float minWeight, maxWeight, midWeight, lowMidWeight, highMidWeight;
-                    GetNextWeightRange(minWeight, maxWeight, maxSlope);
 
-                    // maxWeight = MAXFLOAT;
+                if(next_angle == 1 || fgreater(rounded_angle, next_angle-1)){
+//                    float nodeSlope = openClosedList.Lookup(nodeid).g/openClosedList.Lookup(nodeid).h;
+                    float wma_N;
+//                    if(next_angle>=3)
+//                    {
+//                        double prev_angle = (next_angle-1)/(1/table_step);
+//                        double prev_slope = std::tan(prev_angle* PID180);
+//
+//                        double second_prev_angle = (next_angle-2)/(1/table_step);
+//                        double second_prev_slope = std::tan(second_prev_angle* PID180);
+//
+//                        double third_prev_angle = (next_angle-3)/(1/table_step);
+//                        double third_prev_slope = std::tan(third_prev_angle* PID180);
+//                        
+////                        if(nodeSlope <= third_prev_slope)
+////                            thirdLast += 1;
+////                        else if(nodeSlope <= second_prev_slope)
+////                            secondLast += 1;
+////                        else if(nodeSlope <= prev_slope)
+////                            firstLast += 1;
+//
+//                    }
+
+                    float minWeight, maxWeight, midWeight, lowMidWeight, highMidWeight;
+                    GetNextWeightRange_v2(minWeight, maxWeight, maxSlope);
 
                     midWeight = (maxWeight + minWeight)/2;
                     lowMidWeight = (midWeight + minWeight)/2;
@@ -1660,8 +1356,17 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v2(std::ve
                         wma_N = 0;
 
                     float TheNextWeight = lowMidWeight + (highMidWeight-lowMidWeight)*wma_N;
+//                    float TheNextWeight = minWeight + (maxWeight-minWeight)*wma_N;
+//                    std::cout<<firstLast<<" "<<secondLast<<" "<<thirdLast<<std::endl;
+        
                     
-                    SetNextWeight(maxSlopeH, maxSlopeG, TheNextWeight);
+//                    double MT = ((secondLast - firstLast) + (thirdLast - secondLast))/(std::abs(double((secondLast - firstLast))) + std::abs(double(thirdLast - secondLast)));
+//                    float TheNextWeight = lowMidWeight + (highMidWeight-lowMidWeight)*(1-(MT+1)/2);
+//                    std::cout<<((MT+1)/2)<<std::endl;
+                    
+//                    float TheNextWeight = lowMidWeight;
+                    
+                    SetNextWeight_v2(maxSlopeH, maxSlopeG, TheNextWeight);
 
                     thirdLast = secondLast;
                     secondLast = firstLast;
@@ -1675,22 +1380,10 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v2(std::ve
                 float minWeight, maxWeight;
                 GetNextWeightRange_v2(minWeight, maxWeight, maxSlope);
                 float angle = atan2f(maxSlopeG,maxSlopeH)/PID180;
-                // std::cout<<"slope: "<<maxSlope<<"\n";
-                double rounded_angle;
-                for(double i=floor(angle); i<=ceil(angle); i+=table_step){
-                    if(i<=angle && angle <= i+table_step){
-                        if(angle-i <= i+table_step-angle){
-                            rounded_angle = i;
-                            break;
-                        }
-                        else{
-                            rounded_angle = i+table_step;
-                            break;
-                        }
-                    }
-                }
-                // if(look_up_table.size() == 0 || fgreater(ceil(angle), last_in_lookup)){
-                if(look_up_table.size() == 0 || fgreater(rounded_angle, last_in_lookup)){
+                int rounded_angle = int(angle*(1/table_step));
+                int next_angle = LookUpVector.size();
+                
+                if(next_angle == 1 || fgreater(rounded_angle, next_angle-1)){
                     // std::cout<<"angle is greater: "<<angle<<"\n";
                     double edgeHvalue = theHeuristic->HCost(openClosedList.Lookup(nodeid).data, neighbors[which]);
                     double edgeGvalue = edgeCosts[which];
@@ -1777,295 +1470,6 @@ bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v2(std::ve
                     openClosedList.AddOpenNode(neighbors[x],
                                                env->GetStateHash(neighbors[x]),
                                                Phi_v2(h, openClosedList.Lookup(nodeid).g+edgeCosts[x]),
-                                               openClosedList.Lookup(nodeid).g+edgeCosts[x],
-                                               h,
-                                               nodeid);
-                }
-        }
-    }
-
-    return false;
-}
-
-/**
- * Expand a single node, add successors to open
- * @param thePath will contain an optimal path from start to goal if the
- * function returns TRUE
- * @return TRUE if there is no path or if we have found the goal, FALSE
- * otherwise
- * This is a new version that uses a vector lookup table
- */
-template <class state, class action, class environment, class openList>
-bool DSDWAStar<state,action,environment,openList>::DoSingleSearchStep_v3(std::vector<state> &thePath)
-{
-    if (openClosedList.OpenSize() == 0)
-    {
-        thePath.resize(0); // no path found!
-        //closedList.clear();
-        return true;
-    }
-    uint64_t nodeid = openClosedList.Close();
-//    if (openClosedList.Lookup(nodeid).g+openClosedList.Lookup(nodeid).h > lastF)
-//    { lastF = openClosedList.Lookup(nodeid).g+openClosedList.Lookup(nodeid).h;
-//        //printf("Updated limit to %f\n", lastF);
-//    }
-    if (!openClosedList.Lookup(nodeid).reopened)
-        uniqueNodesExpanded++;
-    nodesExpanded++;
-
-    if ((stopAfterGoal) && (env->GoalTest(openClosedList.Lookup(nodeid).data, goal)))
-    {
-        ExtractPathToStartFromID(nodeid, thePath);
-        // Path is backwards - reverse
-        reverse(thePath.begin(), thePath.end());
-        goalFCost = openClosedList.Lookup(nodeid).f;// + openClosedList.Lookup(nodeid).h;
-
-        return true;
-    }
-    
-    neighbors.resize(0);
-    edgeCosts.resize(0);
-    neighborID.resize(0);
-    neighborLoc.resize(0);
-    heuristicCosts.resize(0);
-    
-    //std::cout << "Expanding: " << env->GetStateHash(openClosedList.Lookup(nodeid).data) << " with f:";
-    //std::cout << openClosedList.Lookup(nodeid).g+openClosedList.Lookup(nodeid).h << std::endl;
-    
-    env->GetSuccessors(openClosedList.Lookup(nodeid).data, neighbors);
-    float maxSlope = 0;
-    float maxSlopeG=-1, maxSlopeH=-1;
-    int which = -1;
-    // 1. load all the children
-    for (unsigned int x = 0; x < neighbors.size(); x++)
-    {
-        uint64_t theID;
-        neighborLoc.push_back(openClosedList.Lookup(env->GetStateHash(neighbors[x]), theID));
-        neighborID.push_back(theID);
-        edgeCosts.push_back(env->GCost(openClosedList.Lookup(nodeid).data, neighbors[x]));
-        heuristicCosts.push_back(theHeuristic->HCost(neighbors[x], goal));
-
-        // open list can only be reduced in cost, thus not needing to extend the priority function
-        if (neighborLoc[x] == kOpenList)
-            continue;
-        float slope = (openClosedList.Lookup(nodeid).g+edgeCosts[x])/heuristicCosts[x];
-        //among all children, finds the find with the maximum slope, to check if we must define a new region.
-        //as we've considered the child with maximum slope, there won't be any node being placed in an undefined region.
-        if (fgreater(slope, maxSlope))
-        {
-            maxSlope = slope;
-            maxSlopeG = openClosedList.Lookup(nodeid).g+edgeCosts[x];
-            maxSlopeH = heuristicCosts[x];
-            which = x;
-        }
-    }
-    //if there is any child with a slope greater than zero
-    if (fgreater(maxSlope, 0))
-    {
-        //each policy, sets a weight for the new region (if we must define a new one).
-        if (openClosedList.OpenSize() != 0)
-        {
-            if (policy == kGreedy)
-            {
-                //new nodes will have the same priority as the node on top of open.
-                //to place the new node on top of open, and move forward as fast as possible.
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, openClosedList.Lookup(openClosedList.Peek()).f);
-            }
-            else if (policy == kHalfEdgeDrop) {
-                //reduced a small amount from the priority value of the node on top of open, to handle local minimas better.
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, openClosedList.Lookup(openClosedList.Peek()).f-edgeCosts[which]*(weight-1)/(2.0*weight));
-            }
-            else if (policy == kXDP)
-            {
-                //one of the baselines.
-                float minWeight, maxWeight;
-                GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-
-                // maxWeight = MAXFLOAT;
-
-                float nextF = (maxSlopeG+(2*weight-1)*maxSlopeH+sqrt((maxSlopeG-maxSlopeH)*(maxSlopeG-maxSlopeH)+4*weight*maxSlopeG*maxSlopeH))/(2*weight);
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, nextF);
-
-            }
-            else if (policy == kXUP)
-            {
-                //one of the baselines.
-                float minWeight, maxWeight;
-                GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-
-                // maxWeight = MAXFLOAT;
-
-                float nextF = (maxSlopeG+maxSlopeH+sqrt((maxSlopeG+maxSlopeH)*(maxSlopeG+maxSlopeH)+4*weight*(weight-1)*maxSlopeH*maxSlopeH))/(2*weight);
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, nextF);
-
-            }
-            else if (policy == MAP)
-            {
-                //assigns new weight, based on the number of node expansions of the previous regions.
-                //assigns smaller weights, if the search is progressive and
-                // most of the recent node expansions were in the most recent created region.
-
-                //CHECK THE SLOPE OF THE EXPANDED NODE TO SEE WHICH REGION IT WAS FROM.
-                //ADD ONE TO THE NUMBER OF THAT REGION.
-                float minWeight, maxWeight;
-                GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-                float angle = atan2f(maxSlopeG,maxSlopeH)/PID180;
-                int rounded_angle = int(angle*(1/table_step));
-                int next_angle = LookUpVector.size();
-
-                if(next_angle == 1 || fgreater(rounded_angle, next_angle-1)){
-                    float nodeSlope = openClosedList.Lookup(nodeid).g/openClosedList.Lookup(nodeid).h;
-                    float wma_N;
-                    if(next_angle>=3)
-                    {
-                        double prev_angle = (next_angle-1)/(1/table_step);
-                        double prev_slope = std::tan(prev_angle* PID180);
-
-                        double second_prev_angle = (next_angle-2)/(1/table_step);
-                        double second_prev_slope = std::tan(second_prev_angle* PID180);
-
-                        double third_prev_angle = (next_angle-3)/(1/table_step);
-                        double third_prev_slope = std::tan(third_prev_angle* PID180);
-                        
-                        if(nodeSlope <= third_prev_slope)
-                            thirdLast += 1;
-                        else if(nodeSlope <= second_prev_slope)
-                            secondLast += 1;
-                        else if(nodeSlope <= prev_slope)
-                            firstLast += 1;
-                    }
-
-                    float minWeight, maxWeight, midWeight, lowMidWeight, highMidWeight;
-                    GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-
-                    midWeight = (maxWeight + minWeight)/2;
-                    lowMidWeight = (midWeight + minWeight)/2;
-                    highMidWeight = (maxWeight + midWeight)/2;
-
-                    std::vector<uint64_t> tempRegionsVec;
-                    tempRegionsVec.push_back(firstLast);
-                    tempRegionsVec.push_back(secondLast);
-                    tempRegionsVec.push_back(thirdLast);
-                    std::sort(tempRegionsVec.begin(), tempRegionsVec.end());
-
-                    float WMA = (3*firstLast + 2*secondLast + 1*thirdLast)/6;
-
-                    float rangeTop = (3*tempRegionsVec[2] + 2*tempRegionsVec[1] + 1*tempRegionsVec[0])/6;
-                    float rangeButtom = (1*tempRegionsVec[2] + 2*tempRegionsVec[1] + 3*tempRegionsVec[0])/6;
-
-                    ////SMALLER WEIGHTS IF (PROGRESS MADE => NODES MOSTLY EXPANDED IN THE MOST RECENT REGION)
-                    //// 0<=wma_N<=1
-                    if(rangeTop - rangeButtom !=0)
-                        wma_N = 1-(WMA - rangeButtom)/(rangeTop - rangeButtom);
-                    else
-                        wma_N = 0;
-
-                    float TheNextWeight = lowMidWeight + (highMidWeight-lowMidWeight)*wma_N;
-                    
-                    SetNextWeight_v3(maxSlopeH, maxSlopeG, TheNextWeight);
-
-                    thirdLast = secondLast;
-                    secondLast = firstLast;
-                    firstLast = 0;
-                }
-            }
-            else if (policy == DWP)
-            {
-                //changes the next weight to maxweight, if the search has reached a weighted region.
-                //otherwise slowly increases the weight as the search proceeds.
-                float minWeight, maxWeight;
-                GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-                float angle = atan2f(maxSlopeG,maxSlopeH)/PID180;
-                int rounded_angle = int(angle*(1/table_step));
-                int next_angle = LookUpVector.size();
-                
-                if(next_angle == 1 || fgreater(rounded_angle, next_angle-1)){
-                    // std::cout<<"angle is greater: "<<angle<<"\n";
-                    double edgeHvalue = theHeuristic->HCost(openClosedList.Lookup(nodeid).data, neighbors[which]);
-                    double edgeGvalue = edgeCosts[which];
-                    if(fless(edgeHvalue/edgeGvalue, 1)){
-                        // std::cout<<"weight type 1\n";
-                        SetNextWeight_v3(maxSlopeH, maxSlopeG, edgeCosts[which]);
-                    }
-                    else{
-                        // std::cout<<"weight type 2\n";
-                        SetNextWeight_v3(maxSlopeH, maxSlopeG, minWeight+(maxWeight-minWeight)*pow((angle/90), 3));
-                    }
-                }
-            }
-            else {// To Run BaseLines using DSDWA* for graphic
-                // -> CL code, uses template Astar
-                // last argument will be ignored
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, 0.01);
-            }
-        }
-        else {
-            // Expansion of the start state. open is empty.
-
-            float minWeight, maxWeight;
-            GetNextWeightRange_v3(minWeight, maxWeight, maxSlope);
-
-            if (policy == MAP || policy == DWP)
-                SetNextWeight_v3(maxSlopeH, maxSlopeG, weight);
-            else
-                SetNextPriority_v3(maxSlopeH, maxSlopeG, 0.01);
-        }
-    }
-    
-    // iterate again updating costs and writing out to memory
-    for (size_t x = 0; x < neighbors.size(); x++)
-    {
-        nodesTouched++;
-        //std::cout << "looking at child with hash : " << env->GetStateHash(neighbors[x]) << "and g-cost"<<openClosedList.Lookup(nodeid).g+edgeCosts[x]<<std::endl;
-        if (theConstraint &&
-            theConstraint->ShouldNotGenerate(start, openClosedList.Lookup(nodeid).data, neighbors[x],
-                                             openClosedList.Lookup(nodeid).g+edgeCosts[x], goal))
-            continue;
-
-        switch (neighborLoc[x])
-        {
-            case kClosedList:
-                // TODO: Can update parent pointers when shorter paths are found to improve solution quality
-                if (reopenNodes)
-                {
-                    if (fless(openClosedList.Lookup(nodeid).g+edgeCosts[x], openClosedList.Lookup(neighborID[x]).g))
-                    {
-                        auto &i = openClosedList.Lookup(neighborID[x]);
-                        i.parentID = nodeid;
-                        i.g = openClosedList.Lookup(nodeid).g+edgeCosts[x];
-                        i.f = Phi_v3(i.h, i.g);
-                        openClosedList.Reopen(neighborID[x]);
-                        // This line isn't normally needed, but in some state spaces we might have
-                        // equality but different meta information, so we need to make sure that the
-                        // meta information is also copied, since this is the most generic A* implementation
-                        i.data = neighbors[x];
-                    }
-                }
-                break;
-            case kOpenList:
-                if (fless(openClosedList.Lookup(nodeid).g+edgeCosts[x], openClosedList.Lookup(neighborID[x]).g))
-                {
-                    auto &i = openClosedList.Lookup(neighborID[x]);
-                    i.parentID = nodeid;
-                    i.g = openClosedList.Lookup(nodeid).g+edgeCosts[x];
-                    i.f = Phi_v3(i.h, i.g);
-                    // This line isn't normally needed, but in some state spaces we might have
-                    // equality but different meta information, so we need to make sure that the
-                    // meta information is also copied, since this is the most generic A* implementation
-                    i.data = neighbors[x];
-                    openClosedList.KeyChanged(neighborID[x]);
-//                    std::cout << " Reducing cost to " << openClosedList.Lookup(nodeid).g+edgeCosts[x] << "\n";
-                }
-                else {
-//                    std::cout << " no cheaper \n";
-                }
-                break;
-            case kNotFound:
-                {
-                    double h = heuristicCosts[x];
-                    openClosedList.AddOpenNode(neighbors[x],
-                                               env->GetStateHash(neighbors[x]),
-                                               Phi_v3(h, openClosedList.Lookup(nodeid).g+edgeCosts[x]),
                                                openClosedList.Lookup(nodeid).g+edgeCosts[x],
                                                h,
                                                nodeid);
@@ -2347,92 +1751,9 @@ void DSDWAStar<state, action,environment,openList>::DrawPriorityGraph(Graphics::
     display.DrawLine(origin, {-1, -1}, 1./100.0f, Colors::white);
 }
 
+
 template <class state, class action, class environment, class openList>
 void DSDWAStar<state, action,environment,openList>::DrawPriorityGraph_v2(Graphics::Display &display) const
-{
-    point3d origin(-1, 1);
-    float priority = 1;
-    float bound = weight;
-
-    // draw bounding line
-    point3d bl1(priority, 0), bl2(0, priority*bound); // main suboptimality line
-    point3d bl3(priority*bound, 0);//(0+2, priority*bound-2); //
-    point3d bl4(priority*bound/(2*bound-1), 0);//priority*bound-(2*bound-1));
-    point3d bl2a(0, priority);
-    point3d bl2c(priority-priority*bound/(2*bound-1), priority*bound);
-    // WA* priority line
-    display.DrawLine(LocalToHOG(bl1), LocalToHOG(bl2), 1/100.0f, Colors::yellow);
-    // 45° upper bound line
-    display.DrawLine(LocalToHOG(bl2), LocalToHOG(bl3), 1/100.0f, Colors::darkgray);
-    // 2w-1 upper bound line
-    display.DrawLine(LocalToHOG(bl1), LocalToHOG(bl2c), 1/100.0f, Colors::darkgray);
-
-    // 45° lower bound line
-    display.DrawLine(LocalToHOG(bl2a), LocalToHOG(bl1), 1/100.0f, Colors::lightgray);
-    // 2w-1 lower bound line
-    display.DrawLine(LocalToHOG(bl2), LocalToHOG(bl4), 1/100.0f, Colors::lightgray);
-
-    // Retrieve items from look_up_table into a vector and sort by key (slope)
-    std::vector<std::pair<double, DSDdata_v2>> sorted_data(look_up_table.begin(), look_up_table.end());
-    std::sort(sorted_data.begin(), sorted_data.end(), [](const auto& a, const auto& b) {
-        return a.first < b.first; // Sort by slope (the key)
-    });
-
-    // Draw actual priority line across using sorted_data
-    for (size_t i = 0; i < sorted_data.size(); ++i)
-    {
-        //re-generate the slope from the angle
-        // double slope = 1.0f / std::tan(sorted_data[i].first* PID180);
-        double slope = std::tan(sorted_data[i].first* PID180);
-        const DSDdata_v2& entry = sorted_data[i].second;
-
-        point3d value = origin;
-        
-        if (std::isinf(slope))
-        {
-            value.x = -1;
-            value.y = -1;
-        }
-        else if (slope < 1)
-        {
-            value.x += 2;
-            value.y -= 2 * slope;
-        }
-        else {
-            value.x += 2 / slope;
-            value.y -= 2;
-        }
-        display.DrawLine(origin, value, 1 / 200.0f, Colors::blue);
-
-        if (std::isinf(slope))
-        {
-            point3d crossPoint2;
-            float lastSlope = (i == 0) ? 0 : std::tan(sorted_data[i-1].first* PID180);
-            crossPoint2.x = priority / (entry.K * (lastSlope + entry.weight));
-            crossPoint2.y = crossPoint2.x * lastSlope;
-            display.DrawLine(LocalToHOG({0, static_cast<float>(weight)}), LocalToHOG(crossPoint2), 1 / 100.0f, Colors::red);
-        }
-        else {
-            point3d crossPoint1, crossPoint2;
-            crossPoint1.x = priority / (entry.K * (slope + entry.weight));
-            crossPoint1.y = crossPoint1.x * slope;
-            float lastSlope = (i == 0) ? 0 : std::tan(sorted_data[i-1].first* PID180);
-            crossPoint2.x = priority / (entry.K * (lastSlope + entry.weight));
-            crossPoint2.y = crossPoint2.x * lastSlope;
-            display.DrawLine(LocalToHOG(crossPoint1), LocalToHOG(crossPoint2), 1 / 100.0f, Colors::red);
-        }
-    }
-    
-    for (const auto& [_, entry] : sorted_data) {
-        display.FillCircle(LocalToHOG(entry.crossPoint), 0.01, Colors::darkgreen);
-    }
-
-    display.DrawLine(origin, {1, 1}, 1. / 100.0f, Colors::white);
-    display.DrawLine(origin, {-1, -1}, 1. / 100.0f, Colors::white);
-}
-
-template <class state, class action, class environment, class openList>
-void DSDWAStar<state, action,environment,openList>::DrawPriorityGraph_v3(Graphics::Display &display) const
 {
     point3d origin(-1, 1);
     float priority = 1;

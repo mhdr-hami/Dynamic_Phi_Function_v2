@@ -49,13 +49,6 @@ public:
     Racetrack(Map *map);
     ~Racetrack();
     void UpdateMap(Map *map);
-    void SetPiviotState();
-    void PrintState(RacetrackState s) const;
-    void SetqueuePiviotState(RacetrackState &s);
-    RacetrackState GetPiviotState();
-    double GetBuckerScore(RacetrackState &s) const;
-    void SetNormalizedCost(bool flag);
-    double NormalizeTileCost(const RacetrackState &a, const RacetrackState &b, double maxWeight, double minWeight) const;
     void GetSuccessors(const RacetrackState &nodeID, std::vector<RacetrackState> &neighbors) const; //current state --> pass in a vector (array lists) __> fill in -- no modification
     void GetActions(const RacetrackState &nodeID, std::vector<RacetrackMove> &actions) const; // no modification
     int GetNumSuccessors(const RacetrackState &stateID) const

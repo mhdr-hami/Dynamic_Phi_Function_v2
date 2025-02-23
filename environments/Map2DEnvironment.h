@@ -133,33 +133,6 @@ public:
 class MapEnvironment : public SearchEnvironment<xyLoc, tDirection>
 {
 public:
-    void PrintState(xyLoc s) const
-    {
-        std::cout<<"Printing State..."<<std::endl;
-        std::cout<<"x="<<s.x<<", y="<<s.y<<std::endl;
-    }
-    void SetPiviotState(){
-        PiviotState.x = queuePiviotState.x;
-        PiviotState.y = queuePiviotState.y;
-    }
-    void SetqueuePiviotState(xyLoc &s){
-        queuePiviotState.x = s.x;
-        queuePiviotState.y = s.y;
-    }
-    xyLoc GetPiviotState(){
-        return PiviotState;
-    }
-    double GetBuckerScore(xyLoc &s) const
-    {
-        if(map->GetTerrainType(s.x, s.y) == kSwamp || map->GetTerrainType(s.x, s.y) == kWater || map->GetTerrainType(s.x, s.y) == kGrass || map->GetTerrainType(s.x, s.y) == kTrees)
-            return 1.0;
-        // Map * theMap = GetMap();
-        // for(uint16_t i=s.x-1; i<=s.x+1; i++)
-        //     for(uint16_t j=s.y-1; j<=s.y+1; j++)
-        //         if(theMap->GetTerrainType(i, j) == kSwamp)
-        //             return 1;
-        return 0.0;
-    }
     void SetTerrainCost(double costs[])
     {
         //[0]=kSwamp, [1]=kWater,[2]=kGrass, [3]=kTrees
@@ -266,8 +239,6 @@ public:
 //    double GetPathLength(std::vector<xyLoc> &neighbors);
 private:
     double inputWeight;
-    xyLoc PiviotState;
-    xyLoc queuePiviotState;
     double TerrainCosts[4]; //[0]=kWater,[1]kSwamp,[2]kGrass,[3]kTrees
     void GetMaxRect(long terrain, int x, int y, int endx, int endy, std::vector<bool> &drawn, Graphics::rect &r) const;
     void DrawSingleTerrain(long terrain, Graphics::Display &disp, std::vector<bool> &drawn) const;

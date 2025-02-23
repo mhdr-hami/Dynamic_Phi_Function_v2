@@ -143,19 +143,8 @@ public:
     MNPuzzle();
     MNPuzzle(const std::vector<slideDir> op_order); // used to set action order
     ~MNPuzzle();
-    double GetBuckerScore(MNPuzzleState<width, height> &s) const;
-    void PrintState(MNPuzzleState<width, height> s) const;
-    void SetPiviotState();
-    void SetqueuePiviotState(MNPuzzleState<width, height> &s);
-    MNPuzzleState<width, height> GetPiviotState();
     void SetMiddleState(MNPuzzleState<width, height> &s);
-    void SetMaxMinTileCost(MNPuzzleState<width, height> &s);
-    void SetNormalizedCost(bool flag);
     void SetPuzzleWeight(int puzzleW);
-    double NormalizeTileCost(const MNPuzzleState<width, height> &a, const MNPuzzleState<width, height> &b, double maxWeight, double minWeight) const;
-    double NormalizeTileCost(double tile, double maxWeight, double minWeight) const;
-    double GetMaxTileCost()const;
-    double GetMinTileCost()const;
     void SetTerrainSize(double s);
     void SetInputWeight(double w);
     void SetWeighted(puzzleWeight w) { weight = w; }
@@ -277,21 +266,11 @@ private:
     // stores a random state on the WA* solution path, to create a swamp area on the path using heuristic
     MNPuzzleState<width, height> middleState;
 
-    MNPuzzleState<width, height> PiviotState, queuePiviotState;
-
     // stores the terrain size of the swamped area.
     double swampedTerrainSize;
 
     // stores the input weight of the search
     double inputWeight;
-
-    // stores the maxCost available for each puzzleWeight
-    double maxTileCost;
-    // stores the minCost available for each puzzleWeight
-    double minTileCost;
-
-    // to have access to both type of GCost functions
-    bool normalizedCost = false;
 };
 
 template <int width, int height>
@@ -304,372 +283,6 @@ private:
 };
 
 //typedef UnitSimulation<MNPuzzleState, slideDir, MNPuzzle> PuzzleSimulation;
-
-/*
-sets the Piviot State to the queuePiviotState.
-Piviot is used in dsmap policy.
-*/
-template <int width, int height>
-void MNPuzzle<width, height>::SetPiviotState()
-{
-
-    for(int i=0; i<width*height; i++) PiviotState.puzzle[i]=queuePiviotState.puzzle[i];
-    PiviotState.blank = queuePiviotState.blank;
-    PiviotState.weight = queuePiviotState.weight;
-}
-
-/*
-sets the queuePiviot State to the state s.
-Piviot is used in dsmap policy.
-*/
-template <int width, int height>
-void MNPuzzle<width, height>::SetqueuePiviotState(MNPuzzleState<width, height> &s)
-{
-    
-    for(int i=0; i<width*height; i++) queuePiviotState.puzzle[i]=s.puzzle[i];
-    queuePiviotState.blank = s.blank;
-    queuePiviotState.weight = s.weight;
-}
-
-/*
-returns the Piviot State.
-Piviot is used in dsmap policy.
-*/
-template <int width, int height>
-MNPuzzleState<width, height> MNPuzzle<width, height>::GetPiviotState()
-{
-    return PiviotState;
-}
-
-template <int width, int height>
-void MNPuzzle<width, height>::PrintState(MNPuzzleState<width, height> s) const
-{
-    std::cout<<"Printing State..."<<std::endl;
-    for(int i=0; i<width*height; i++) std::cout<<s.puzzle[i]<<" ";
-    std::cout<<std::endl;
-
-}
-
-template <int width, int height>
-double MNPuzzle<width, height>::GetBuckerScore(MNPuzzleState<width, height> &s) const
-{
-    // if(flesseq(HCost(s, middleState), swampedTerrainSize)) return 1.0;
-
-    if(s.blank==5 || s.blank==6 || s.blank==9 || s.blank==10) return 1.0;
-    // if(s.blank==10 || s.blank==11 || s.blank==14 || s.blank==15) return 1.0;
-    // if(s.blank==0 || s.blank==1 || s.blank==4 || s.blank==5) return 1.0;
-
-    else return 0;
-
-    // if (s.blank >= width)
-    // //UP
-    // {
-    //     if(s.puzzle[s.blank-width]==1)
-    //         return 1.0;
-    // }
-    // //DOWN
-    // if (s.blank < s.size() - width)
-    // {
-    //     if(s.puzzle[s.blank+width]==1)
-    //         return 1.0;
-    // }
-    // //RIGHT
-    // if ((s.blank%width) < width-1)
-    // {
-    //     if(s.puzzle[s.blank+1]==1)
-    //         return 1.0;
-    // }
-    // //LEFT
-    // if ((s.blank%width) > 0)
-    // {
-    //     if(s.puzzle[s.blank-1]==1)
-    //         return 1.0;
-    // }
-    // return 0.0;
-
-    // double buckerScore = 0;
-    // int numNeighbours = 0;
-    // double minBuckerScore = 1.5;
-    // double maxBuckerScore = 14.5;
-    // if (s.blank >= width)
-    // //UP
-    // {
-    //     buckerScore += s.puzzle[s.blank-width];
-    //     numNeighbours += 1;
-    // }
-    // //DOWN
-    // if (s.blank < s.size() - width)
-    // {
-    //     buckerScore += s.puzzle[s.blank+width];
-    //     numNeighbours += 1;
-    // }
-    // //RIGHT
-    // if ((s.blank%width) < width-1)
-    // {
-    //     buckerScore += s.puzzle[s.blank+1];
-    //     numNeighbours += 1;
-    // }
-    // //LEFT
-    // if ((s.blank%width) > 0)
-    // {
-    //     buckerScore += s.puzzle[s.blank-1];
-    //     numNeighbours += 1;
-    // }
-    // buckerScore /= numNeighbours;
-    // buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-    // return buckerScore;
-
-    // switch (weight)
-//    {
-//        case kUnitWeight:
-//            minBuckerScore = 1.5;
-//            maxBuckerScore = 8.5;
-//            //UP
-//            if ( s.blank >= width)
-//            {
-//                int tile =  s.puzzle[ s.blank-width];
-//                buckerScore += tile;
-//                numNeighbours += 1;
-//            }
-//            //DOWN
-//            if ( s.blank <  s.size() - width)
-//            {
-//                int tile = s.puzzle[s.blank+width];
-//                buckerScore += tile;
-//                numNeighbours += 1;
-//            }
-//            //RIGHT
-//            if ((s.blank%width) < width-1)
-//            {
-//                int tile = s.puzzle[s.blank+1];
-//                buckerScore += tile;
-//                numNeighbours += 1;
-//            }
-//            //LEFT
-//            if ((s.blank%width) > 0)
-//            {
-//                int tile = s.puzzle[s.blank-1];
-//                buckerScore += tile;
-//                numNeighbours += 1;
-//            }
-//            buckerScore /= numNeighbours;
-//            buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-//
-//            break;
-//        case kSquared:
-//            minBuckerScore = 2.5;
-//            maxBuckerScore = 72.5;
-//            //UP
-//            if (s.blank >= width)
-//            {
-//                int tile = s.puzzle[s.blank-width];
-//                buckerScore += tile*tile;
-//                numNeighbours += 1;
-//            }
-//            //DOWN
-//            if (s.blank < s.size() - width)
-//            {
-//                int tile = s.puzzle[s.blank+width];
-//                buckerScore += tile*tile;
-//                numNeighbours += 1;
-//            }
-//            //RIGHT
-//            if ((s.blank%width) < width-1)
-//            {
-//                int tile = s.puzzle[s.blank+1];
-//                buckerScore += tile*tile;
-//                numNeighbours += 1;
-//            }
-//            //LEFT
-//            if ((s.blank%width) > 0)
-//            {
-//                int tile = s.puzzle[s.blank-1];
-//                buckerScore += tile*tile;
-//                numNeighbours += 1;
-//            }
-//            buckerScore /= numNeighbours;
-//            buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-//
-//            break;
-//        case kSquareRoot:
-//            minBuckerScore = 0;
-//            maxBuckerScore = 0;
-//            //UP
-//            if (s.blank >= width)
-//            {
-//                int tile = s.puzzle[s.blank-width];
-//                buckerScore += sqrt(tile);
-//                numNeighbours += 1;
-//            }
-//            //DOWN
-//            if (s.blank < s.size() - width)
-//            {
-//                int tile = s.puzzle[s.blank+width];
-//                buckerScore += sqrt(tile);
-//                numNeighbours += 1;
-//            }
-//            //RIGHT
-//            if ((s.blank%width) < width-1)
-//            {
-//                int tile = s.puzzle[s.blank+1];
-//                buckerScore += sqrt(tile);
-//                numNeighbours += 1;
-//            }
-//            //LEFT
-//            if ((s.blank%width) > 0)
-//            {
-//                int tile = s.puzzle[s.blank-1];
-//                buckerScore += sqrt(tile);
-//                numNeighbours += 1;
-//            }
-//            buckerScore /= numNeighbours;
-//            buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-//
-//            break;
-//        case kSquarePlusOneRoot:
-//            minBuckerScore = 0;
-//            maxBuckerScore = 0;
-//            //UP
-//            if (s.blank >= width)
-//            {
-//                int tile = s.puzzle[s.blank-width];
-//                buckerScore += sqrt(1+tile*tile);
-//                numNeighbours += 1;
-//            }
-//            //DOWN
-//            if (s.blank < s.size() - width)
-//            {
-//                int tile = s.puzzle[s.blank+width];
-//                buckerScore += sqrt(1+tile*tile);
-//                numNeighbours += 1;
-//            }
-//            //RIGHT
-//            if ((s.blank%width) < width-1)
-//            {
-//                int tile = s.puzzle[s.blank+1];
-//                buckerScore += sqrt(1+tile*tile);
-//                numNeighbours += 1;
-//            }
-//            //LEFT
-//            if ((s.blank%width) > 0)
-//            {
-//                int tile = s.puzzle[s.blank-1];
-//                buckerScore += sqrt(1+tile*tile);
-//                numNeighbours += 1;
-//            }
-//            buckerScore /= numNeighbours;
-//            buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-//
-//            break;
-//        case kUnitPlusFrac:
-//            minBuckerScore = 0;
-//            maxBuckerScore = 0;
-//            //UP
-//            if (s.blank >= width)
-//            {
-//                int tile = s.puzzle[s.blank-width];
-//                buckerScore += 1.0+1.0/(1.0+tile);
-//                numNeighbours += 1;
-//            }
-//            //DOWN
-//            if (s.blank < s.size() - width)
-//            {
-//                int tile = s.puzzle[s.blank+width];
-//                buckerScore += 1.0+1.0/(1.0+tile);
-//                numNeighbours += 1;
-//            }
-//            //RIGHT
-//            if ((s.blank%width) < width-1)
-//            {
-//                int tile = s.puzzle[s.blank+1];
-//                buckerScore += 1.0+1.0/(1.0+tile);
-//                numNeighbours += 1;
-//            }
-//            //LEFT
-//            if ((s.blank%width) > 0)
-//            {
-//                int tile = s.puzzle[s.blank-1];
-//                buckerScore += 1.0+1.0/(1.0+tile);
-//                numNeighbours += 1;
-//            }
-//            buckerScore /= numNeighbours;
-//            buckerScore = (buckerScore - minBuckerScore)/(maxBuckerScore - minBuckerScore);
-//
-//            break;
-//    }
-}
-
-/*
-stores the maxCost and minCost available for each puzzleWeight.
-gets an arbitrary state as the input to find the (size of the puzzle)-1 = bigTile
-*/
-template <int width, int height>
-void MNPuzzle<width, height>::SetMaxMinTileCost(MNPuzzleState<width, height> &s)
-{
-    int bigTile = s.size()-1;
-    int smallTile = 1;
-    switch (weight)
-    {
-        case kDWSTP:
-        {
-            maxTileCost=1; //Does not apply here
-            minTileCost=1; //Does not apply here
-            break;
-        }
-        case kUnitWeight:
-        {
-            maxTileCost=1;
-            minTileCost=1;
-            break;
-        }
-        case kUnitPlusFrac:
-        {
-            maxTileCost=max(1.0+1.0/(1.0+bigTile), 1.0+1.0/(1.0+smallTile));
-            minTileCost=min(1.0+1.0/(1.0+bigTile), 1.0+1.0/(1.0+smallTile));
-            break;
-        }
-        case kSquared:
-        {
-            maxTileCost=max(bigTile*bigTile, smallTile*smallTile);
-            minTileCost=min(bigTile*bigTile, smallTile*smallTile);
-            break;
-        }
-        case kSquareRoot:
-        {
-            maxTileCost=max(sqrt(bigTile), sqrt(smallTile));
-            minTileCost=min(sqrt(bigTile), sqrt(smallTile));
-            break;
-        }
-        case kSquarePlusOneRoot:
-        {
-            maxTileCost=max(sqrt(1+bigTile*bigTile), sqrt(1+smallTile*smallTile));
-            minTileCost=min(sqrt(1+bigTile*bigTile), sqrt(1+smallTile*smallTile));
-            break;
-        }
-    }
-    // std::cout<<"maxTileCost="<<maxTileCost<<", minTileCost="<<minTileCost<<std::endl;
-}
-
-template <int width, int height>
-double MNPuzzle<width, height>::GetMaxTileCost() const
-{
-    return maxTileCost;
-}
-
-template <int width, int height>
-double MNPuzzle<width, height>::GetMinTileCost() const
-{
-    return minTileCost;
-}
-
-/*
-defines if we are going to use the normalizedCost version of STP.
-*/
-template <int width, int height>
-void MNPuzzle<width, height>::SetNormalizedCost(bool flag)
-{
-    normalizedCost = flag;
-}
 
 /*
 This function sets the puzzleWeight.
@@ -700,59 +313,6 @@ void MNPuzzle<width, height>::SetPuzzleWeight(int puzzleW){
     default:
         break;
     }
-}
-
-/*
-This function finds the cost between two states (with respect to puzzleWeight).
-Then normalizes it, to a cost between 1 and 2w-1.
-*/
-template <int width, int height>
-double MNPuzzle<width, height>::NormalizeTileCost(const MNPuzzleState<width, height> &a, const MNPuzzleState<width, height> &b, double maxWeight, double minWeight) const
-{
-    double c = a.puzzle[b.blank];
-    double puzzleCost=1;
-    switch (weight)
-    {
-        case kDWSTP: //Does not apply here
-        {
-            break;
-        }
-        case kUnitWeight: puzzleCost=1.0; break;
-        case kUnitPlusFrac: puzzleCost=1.0+1.0/(1.0+c); break;
-        case kSquared: puzzleCost=c*c; break;
-        case kSquareRoot: puzzleCost=sqrt(c); break;
-        case kSquarePlusOneRoot: puzzleCost=sqrt(1+c*c); break;
-    }
-
-    // return (puzzleCost-minTileCost)*(2*inputWeight-2)/(maxTileCost - minTileCost) + 1;
-    return (puzzleCost-minTileCost)*(maxWeight-minWeight)/(maxTileCost - minTileCost) + minWeight;
-
-}
-
-/*
-c is a tile. This function updates c (with respect to puzzleWeight) to a cost.
-Then normalizes it, to a cost between 1 and 2w-1.
-*/
-template <int width, int height>
-double MNPuzzle<width, height>::NormalizeTileCost(double c, double maxWeight, double minWeight) const
-{
-    double puzzleCost=1;
-    switch (weight)
-    {
-        case kDWSTP: //Does not apply here
-        {
-            break;
-        }
-        case kUnitWeight: puzzleCost=1.0; break;
-        case kUnitPlusFrac: puzzleCost=1.0+1.0/(1.0+c); break;
-        case kSquared: puzzleCost=c*c; break;
-        case kSquareRoot: puzzleCost=sqrt(c); break;
-        case kSquarePlusOneRoot: puzzleCost=sqrt(1+c*c); break;
-    }
-
-    // return (puzzleCost-minTileCost)*(2*inputWeight-2)/(maxTileCost - minTileCost) + 1;
-    return (puzzleCost-minTileCost)*(maxWeight-minWeight)/(maxTileCost - minTileCost) + minWeight;
-
 }
 
 /*
@@ -1246,24 +806,19 @@ double MNPuzzle<width, height>::HCost(const MNPuzzleState<width, height> &state1
                                      + abs((int)(yloc[state1.puzzle[x + y*width]] - y)));
                     double movingTile = state1.puzzle[x + y*width];
 
-                    if(normalizedCost){
-                        man_dist += absDist*NormalizeTileCost(movingTile, 2*inputWeight-1, 1);
-                    }
-                    else{
-                        switch (weight)
+                    switch (weight)
+                    {
+                        case kDWSTP:man_dist += absDist; break;
+                        case kUnitWeight: man_dist += absDist; break;
+                        case kUnitPlusFrac: man_dist += absDist*(1.0+1.0/(1.0+movingTile)); break;
+                        case kSquared: man_dist += absDist*(movingTile)*(movingTile); break;
+                        case kSquareRoot: man_dist += absDist*sqrt(movingTile); break;
+                        case kSquarePlusOneRoot:
                         {
-                            case kDWSTP:man_dist += absDist; break;
-                            case kUnitWeight: man_dist += absDist; break;
-                            case kUnitPlusFrac: man_dist += absDist*(1.0+1.0/(1.0+movingTile)); break;
-                            case kSquared: man_dist += absDist*(movingTile)*(movingTile); break;
-                            case kSquareRoot: man_dist += absDist*sqrt(movingTile); break;
-                            case kSquarePlusOneRoot:
-                            {
-                                double tmp = movingTile;
-                                tmp = sqrt(tmp*tmp+1);
-                                man_dist += tmp*absDist;
-                                break;
-                            }
+                            double tmp = movingTile;
+                            tmp = sqrt(tmp*tmp+1);
+                            man_dist += tmp*absDist;
+                            break;
                         }
                     }
 
@@ -1335,30 +890,25 @@ double MNPuzzle<width, height>::GCost(const MNPuzzleState<width, height> &a, con
     // square root of tile
     // tile itself
 
-    if(normalizedCost)
-        return NormalizeTileCost(a, b, 2*inputWeight-1, 1);
-    else{
-        switch (weight)
+    switch (weight)
+    {
+        case kDWSTP:
         {
-            case kDWSTP:
-            {
-                double tmpH = HCost(middleState, b);
-                if(flesseq(tmpH, swampedTerrainSize+5) && fgreatereq(tmpH, swampedTerrainSize-5)){
-                    // return 2.0*inputWeight-1.0;
-                    return 7.0;
-                }
-                else{
-                    return 1.0;
-                }
+            double tmpH = HCost(middleState, b);
+            if(flesseq(tmpH, swampedTerrainSize+5) && fgreatereq(tmpH, swampedTerrainSize-5)){
+                return 2.0*inputWeight-1.0;
             }
-            case kUnitWeight: return 1.0;
-            case kUnitPlusFrac: return (1.0+1.0/(1.0+a.puzzle[b.blank]));
-            case kSquared: return a.puzzle[b.blank]*a.puzzle[b.blank];
-            case kSquareRoot: return sqrt(a.puzzle[b.blank]);
-            case kSquarePlusOneRoot: return sqrt(1+a.puzzle[b.blank]*a.puzzle[b.blank]);
+            else{
+                return 1.0;
+            }
         }
-        return 1;
+        case kUnitWeight: return 1.0;
+        case kUnitPlusFrac: return (1.0+1.0/(1.0+a.puzzle[b.blank]));
+        case kSquared: return a.puzzle[b.blank]*a.puzzle[b.blank];
+        case kSquareRoot: return sqrt(a.puzzle[b.blank]);
+        case kSquarePlusOneRoot: return sqrt(1+a.puzzle[b.blank]*a.puzzle[b.blank]);
     }
+    return 1;
 }
 
 template <int width, int height>
@@ -1395,67 +945,54 @@ double MNPuzzle<width, height>::AdditiveGCost(const MNPuzzleState<width, height>
 template <int width, int height>
 double MNPuzzle<width, height>::GCost(const MNPuzzleState<width, height> &s, const slideDir &d) const
 {
-    if(normalizedCost)
+    switch (weight)
     {
-        switch (d)
+        case kDWSTP: //TODO: DWSTP, we need new state b, to find its h(mid,b).
         {
-            case kLeft: return NormalizeTileCost(s.puzzle[s.blank-1], 2*inputWeight-1, 1);
-            case kUp: return NormalizeTileCost(s.puzzle[s.blank-width], 2*inputWeight-1, 1);
-            case kDown: return NormalizeTileCost(s.puzzle[s.blank+width], 2*inputWeight-1, 1);
-            case kRight: return NormalizeTileCost(s.puzzle[s.blank+1], 2*inputWeight-1, 1);
+            return -1;
         }
-    }
-    else
-    {
-        switch (weight)
+        case kUnitWeight:
         {
-            case kDWSTP: //TODO: DWSTP, we need new state b, to find its h(mid,b).
+            return 1;
+        }
+        case kUnitPlusFrac:
+        {
+            switch (d)
             {
-                return -1;
+                case kLeft: return 1.0+1.0/(1.0+s.puzzle[s.blank-1]);
+                case kUp: return 1.0+1.0/(1.0+s.puzzle[s.blank-width]);
+                case kDown: return 1.0+1.0/(1.0+s.puzzle[s.blank+width]);
+                case kRight: return 1.0+1.0/(1.0+s.puzzle[s.blank+1]);
             }
-            case kUnitWeight:
+        }
+        case kSquared:
+        {
+            switch (d)
             {
-                return 1;
+                case kLeft: return s.puzzle[s.blank-1]*s.puzzle[s.blank-1];
+                case kUp: return s.puzzle[s.blank-width]*s.puzzle[s.blank-width];
+                case kDown: return s.puzzle[s.blank+width]*s.puzzle[s.blank+width];
+                case kRight: return s.puzzle[s.blank+1]*s.puzzle[s.blank+1];
             }
-            case kUnitPlusFrac:
+        }
+        case kSquareRoot:
+        {
+            switch (d)
             {
-                switch (d)
-                {
-                    case kLeft: return 1.0+1.0/(1.0+s.puzzle[s.blank-1]);
-                    case kUp: return 1.0+1.0/(1.0+s.puzzle[s.blank-width]);
-                    case kDown: return 1.0+1.0/(1.0+s.puzzle[s.blank+width]);
-                    case kRight: return 1.0+1.0/(1.0+s.puzzle[s.blank+1]);
-                }
+                case kLeft: return sqrt(s.puzzle[s.blank-1]);
+                case kUp: return sqrt(s.puzzle[s.blank-width]);
+                case kDown: return sqrt(s.puzzle[s.blank+width]);
+                case kRight: return sqrt(s.puzzle[s.blank+1]);
             }
-            case kSquared:
+        }
+        case kSquarePlusOneRoot:
+        {
+            switch (d)
             {
-                switch (d)
-                {
-                    case kLeft: return s.puzzle[s.blank-1]*s.puzzle[s.blank-1];
-                    case kUp: return s.puzzle[s.blank-width]*s.puzzle[s.blank-width];
-                    case kDown: return s.puzzle[s.blank+width]*s.puzzle[s.blank+width];
-                    case kRight: return s.puzzle[s.blank+1]*s.puzzle[s.blank+1];
-                }
-            }
-            case kSquareRoot:
-            {
-                switch (d)
-                {
-                    case kLeft: return sqrt(s.puzzle[s.blank-1]);
-                    case kUp: return sqrt(s.puzzle[s.blank-width]);
-                    case kDown: return sqrt(s.puzzle[s.blank+width]);
-                    case kRight: return sqrt(s.puzzle[s.blank+1]);
-                }
-            }
-            case kSquarePlusOneRoot:
-            {
-                switch (d)
-                {
-                    case kLeft: return sqrt(1+s.puzzle[s.blank-1]*s.puzzle[s.blank-1]);
-                    case kUp: return sqrt(1+s.puzzle[s.blank-width]*s.puzzle[s.blank-width]);
-                    case kDown: return sqrt(1+s.puzzle[s.blank+width]*s.puzzle[s.blank+width]);
-                    case kRight: return sqrt(1+s.puzzle[s.blank+1]*s.puzzle[s.blank+1]);
-                }
+                case kLeft: return sqrt(1+s.puzzle[s.blank-1]*s.puzzle[s.blank-1]);
+                case kUp: return sqrt(1+s.puzzle[s.blank-width]*s.puzzle[s.blank-width]);
+                case kDown: return sqrt(1+s.puzzle[s.blank+width]*s.puzzle[s.blank+width]);
+                case kRight: return sqrt(1+s.puzzle[s.blank+1]*s.puzzle[s.blank+1]);
             }
         }
     }

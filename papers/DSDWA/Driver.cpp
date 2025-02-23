@@ -25,8 +25,8 @@
 #include "MNPuzzle.h"
 #include "STPInstances.h"
 
-int stepsPerFrame = 1;
-float bound = 4;
+int stepsPerFrame = 5;
+float bound = 2;
 int problemNumber = 0;
 float testScale = 1.0;
 void GetNextWeightRange(float &minWeight, float &maxWeight, point3d currPoint, float nextSlope);
@@ -50,13 +50,12 @@ RacetrackState from;
 RacetrackState end;
 int numExtendedGoals = 300;
 int exper=8; //Exper 8 is to make DW domains. Use any other number for other domains.
-float terrain_size=30, terrain_width=10, terrain_height=10;
+float terrain_size=30, terrain_width, terrain_height;
 double Tcosts[4], rdm, hardness[4];
 bool showPlane = false;
 bool searchRunning = false;
 bool saveSVG = false;
 bool useDH = false;
-bool useLookUpTable = false;
 bool limitScenarios = false;
 int numLimitedScenarios = 1000, lowerLimit=50, upperLimit=2500, numScenario=598;
 int randomIndex;
@@ -64,11 +63,13 @@ xyLoc xyLocRandomState;
 MNPuzzleState<4, 4> mnpRandomState;
 GridEmbedding *dh;
 
+bool useLookUpTable = false;
+
+// NOTE: LOADING MAPS REQUIRES ABSOLUTE PATH, THE PATHS MUST BE CHANGED TO RUN THE VISUALIZED CODE
 // 1=DSD random room map, 2=DSD random map, 3=DSD random maze, 4=DSD designed map,
 // 5=DSD Load map, 6=DSD Load RaceTrack, 7=DPS Load map, 8=DPS Load RaceTrack
-int mapcmd = 2;
+int mapcmd = 3;
 
-//std::string mapload = "mazes/maze512-32-6";
  std::string mapload = "dao/ost003d";
 // std::string mapload = "dao/orz000d";
 // std::string mapload = "dao/den520d";
@@ -76,6 +77,7 @@ int mapcmd = 2;
 // std::string mapload = "da2/ca_caverns1";
 // std::string mapload = "da2/lt_undercityserialkiller";
 // std::string mapload = "da2/lt_foundry_n";
+// std::string mapload = "mazes/maze512-32-6";
 
 //#include "Plot2D.h"
 struct DSDdata {
@@ -91,9 +93,6 @@ struct DSDdata_v2 {
     float K;
     point3d crossPoint; // cached for simplicity
 };
-std::unordered_map<double, DSDdata_v2> look_up_table;
-double last_in_lookup;
-
 std::vector<DSDdata_v2> LookUpVector;
 
 int main(int argc, char* argv[])
@@ -128,14 +127,8 @@ void InstallHandlers()
     InstallCommandLineHandler(MyCLHandler, "-gridBaseLines", "-gridBaseLines <map> <scenario> <alg> <weight> <TerrainSize> <SwampHardness> <Experiment>", "Test grid <map> on <scenario> with <algorithm> <weight> <TerrainSize> <SwampHardness> and <Experiment>");
     InstallCommandLineHandler(MyCLHandler, "-rtBaseLines", "-rtBaseLines <map> <scenario> <alg> <weight> <numExtendedGoals>", "Test grid <map> on <scenario> with <algorithm> <weight> <numExtendedGoals>");
     InstallCommandLineHandler(MyCLHandler, "-rtDSD", "-rtDSD <map> <scenario> <alg> <weight> <numExtendedGoals>", "Test grid <map> on <scenario> with <algorithm> <weight> <numExtendedGoals>");
-    InstallCommandLineHandler(MyCLHandler, "-exp0BaseLines", "-exp0BaseLines <alg> <weight> <TerrainSize> <mapType> <SwampHardness>", "Test grid with <algorithm> <weight> <TerrainSize> <mapType> <SwampHardness>");
-    InstallCommandLineHandler(MyCLHandler, "-exp0DSD", "-exp0DSD <alg> <weight> <TerrainSize> <mapType> <SwampHardness>", "Test grid with <algorithm> <weight> <TerrainSize> <mapType> <SwampHardness>");
-    InstallCommandLineHandler(MyCLHandler, "-exp0DPS", "-exp0DPS <weight> <TerrainSize> <mapType> <SwampHardness>", "Test grid <weight> <TerrainSize> <mapType> <SwampHardness>");
-    InstallCommandLineHandler(MyCLHandler, "-stpAstar", "-stpAstar <problem> <alg> <weight>", "Test STP <problem> <algorithm> <weight>");
     InstallCommandLineHandler(MyCLHandler, "-stpDPS", "-stpDPS problem weight puzzleW", "Test STP <problem> <weight> <puzzleW>");
     InstallCommandLineHandler(MyCLHandler, "-rtDPS", "-rtDPS <map> <scenario> <weight> <numExtendedGoals>", "Test grid <map> on <scenario> with <weight> <numExtendedGoals>");
-    InstallCommandLineHandler(MyCLHandler, "-timeDSWA", "-timeDSWA stp problem weight", "Test STP <problem> <weight>");
-    InstallCommandLineHandler(MyCLHandler, "-map", "-map <map> <scenario> alg weight", "Test grid <map> on <scenario> with <algorithm> <weight>");
     
     InstallWindowHandler(MyWindowHandler);
     
@@ -233,10 +226,8 @@ void MyWindowHandler(unsigned long windowID, tWindowEventType eType){
             dsd.SetWeight(bound);
 
             if(useLookUpTable){
-                // look_up_table.clear();
-                // dsd.InitializeSearch_v2(me, start, goal, solution);
                 LookUpVector.clear();
-                dsd.InitializeSearch_v3(me, start, goal, solution);
+                dsd.InitializeSearch_v2(me, start, goal, solution);
 
             }
             else{
@@ -349,7 +340,14 @@ void MyWindowHandler(unsigned long windowID, tWindowEventType eType){
             if(mapcmd == 6){
                 dsd_track.policy = kWA;
                 dsd_track.SetWeight(bound);
-                dsd_track.InitializeSearch(r, from, end, path);
+                if(useLookUpTable){
+                    LookUpVector.clear();
+                    dsd_track.InitializeSearch_v2(r, from, end, path);
+                }
+                else{
+                    data.resize(0);
+                    dsd_track.InitializeSearch(r, from, end, path);
+                }
             }
             else if(mapcmd == 8){
                 dps_track.SetOptimalityBound(bound);
@@ -392,10 +390,7 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
                     if (solution.size() == 0)
                     {
                         if(mapcmd <= 5 && useLookUpTable){
-                            // if (dsd.DoSingleSearchStep_v2(solution)){
-                            //     std::cout << "Node Expansions: " << dsd.GetNodesExpanded() << "\n";
-                            // }
-                            if (dsd.DoSingleSearchStep_v3(solution)){
+                            if (dsd.DoSingleSearchStep_v2(solution)){
                                 std::cout << "Node Expansions: " << dsd.GetNodesExpanded() << "\n";
                             }
                         }
@@ -431,8 +426,7 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
                     dsd.DrawPriorityGraph(display);
                 }
                 if(mapcmd <= 5 && useLookUpTable){
-                    // dsd.DrawPriorityGraph_v2(display);
-                    dsd.DrawPriorityGraph_v3(display);
+                    dsd.DrawPriorityGraph_v2(display);
                 }
                 else if(mapcmd == 7){
                     //Does not apply here
@@ -525,8 +519,14 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
                 {
                     if (path.size() == 0)
                     {
-                        if(mapcmd == 6){
+                        if(mapcmd == 6 && !useLookUpTable){
                             if (dsd_track.DoSingleSearchStep(path)){
+                            std::cout << "Node Expansions: " << dsd_track.GetNodesExpanded() << "\n";
+                            searchRunning = false;
+                            }
+                        }
+                        else if(mapcmd == 6 && useLookUpTable){
+                            if (dsd_track.DoSingleSearchStep_v2(path)){
                             std::cout << "Node Expansions: " << dsd_track.GetNodesExpanded() << "\n";
                             searchRunning = false;
                             }
@@ -550,8 +550,11 @@ void MyFrameHandler(unsigned long windowID, unsigned int viewport, void *)
         if (viewport == 1){
             if (searchRunning)
             {
-                if(mapcmd == 6){
+                if(mapcmd == 6 && !useLookUpTable){
                     dsd_track.DrawPriorityGraph(display);
+                }
+                else if(mapcmd == 6 && useLookUpTable){
+                    dsd_track.DrawPriorityGraph_v2(display);
                 }
                 else if(mapcmd == 8){
                     //Does not apply here
@@ -666,11 +669,9 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             // std::cout<<"SetTerrainSize is: "<<hardcodedNumbers[atoi(argument[1])]<<"\n";
         }
         
-        mnp.SetPuzzleWeight(atoi(argument[4])); //1
         // case 0:UnitWeight, case 1:SquareRoot, case 2:Squared,
         // case 3:UnitPlusFrac, case 4:SquarePlusOneRoot, case 5:DW
-
-        mnp.SetMaxMinTileCost(start); //2
+        mnp.SetPuzzleWeight(atoi(argument[4])); //1
 
         if(atoi(argument[2]) == 0){ //WA*
             tas_mnp.SetPhi([=](double h,double g){return g+proveBound*h;});
@@ -691,24 +692,20 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             tas.SetPhi([=](double h,double g){return g+h;});
         }
         
-        // tas_mnp.InitializeSearch(&mnp, start, goal, path);
-        // tas_mnp.GetPath(&mnp, start, goal, path);
-        // printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), tas_mnp.GetNodesExpanded(), path.size());
-
         tas_mnp.InitializeSearch(&mnp, start, goal, path);
-        clock_t start_time, end_time;
+
+		clock_t start_time, end_time;
         start_time = clock();
 
-        float avg_runtime_per_node = tas_mnp.GetPath_v2(&mnp, start, goal, path);
-        avg_runtime_per_node *= pow(10, 9);
+		tas_mnp.GetPath(&mnp, start, goal, path);
 
-        end_time = clock();
-        float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-        total_runningTime *= pow(10, 9);
-            
-        printf("Time - STP %d ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f \n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), tas_mnp.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
-            
-        exit(0);
+		end_time = clock();
+        float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+        TotalRunningTime *= pow(10, 9);
+			
+		printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu TotalRunningTime %1.3f\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), tas_mnp.GetNodesExpanded(), path.size(), TotalRunningTime);
+			
+		exit(0);
     }
     else if (strcmp(argument[0], "-stpDSD") == 0)
     {
@@ -745,39 +742,37 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             // std::cout<<"SetTerrainSize is: "<<hardcodedNumbers[atoi(argument[1])]<<"\n";
         }
 
-        mnp.SetPuzzleWeight(atoi(argument[4])); //1
         // case 0:UnitWeight, case 1:SquareRoot, case 2:Squared,
         // case 3:UnitPlusFrac, case 4:SquarePlusOneRoot, case 5:DW
+        mnp.SetPuzzleWeight(atoi(argument[4])); //1
 
-        mnp.SetMaxMinTileCost(start); //2
-
-        // dsd_mnp.InitializeSearch(&mnp, start, goal, path);
-        // dsd_mnp.GetPath(&mnp, start, goal, path);
-        // printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), dsd_mnp.GetNodesExpanded(), path.size());
-
-        dsd_mnp.InitializeSearch_v3(&mnp, start, goal, path);
-        clock_t start_time, end_time;
+		clock_t start_time, end_time;
         start_time = clock();
 
-        float avg_runtime_per_node = dsd_mnp.GetPath_v3(&mnp, start, goal, path);
-        avg_runtime_per_node *= pow(10, 9);
-
-        end_time = clock();
-        float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-        total_runningTime *= pow(10, 9);
-            
-        printf("Time - STP %d ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f \n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), dsd_mnp.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
-        
-        
-        //Save the SVG of the isoloines plots
-        if(saveSVG && (dsd_mnp.policy==5)){
-            Graphics::Display d;
-            dsd_mnp.DrawPriorityGraph(d);
-            std::string s = "stp="+ string(argument[1])+"_w="+string(argument[3])+".svg";
-            MakeSVG(d, s.c_str(), 750,750,0);
+        if(!useLookUpTable){
+            dsd_mnp.InitializeSearch(&mnp, start, goal, path);
+            dsd_mnp.GetPath(&mnp, start, goal, path);
         }
-            
-        exit(0);
+        else{
+            dsd_mnp.InitializeSearch_v2(&mnp, start, goal, path);
+            dsd_mnp.GetPath_v2(&mnp, start, goal, path);
+        }
+
+		end_time = clock();
+        float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+        TotalRunningTime *= pow(10, 9);
+
+		//Save the SVG of the isoloines plots
+		if(saveSVG && (dsd_mnp.policy==5)){
+			Graphics::Display d;
+			dsd_mnp.DrawPriorityGraph(d);
+			std::string s = "stp="+ string(argument[1])+"_w="+string(argument[3])+".svg";
+			MakeSVG(d, s.c_str(), 750,750,0);
+		}
+			
+		printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu TotalRunningTime %1.3f\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), dsd_mnp.GetNodesExpanded(), path.size(), TotalRunningTime);
+			
+		exit(0);
     }
     else if (strcmp(argument[0], "-stpDPS") == 0)
     {
@@ -804,29 +799,25 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             // std::cout<<"SetTerrainSize is: "<<hardcodedNumbers[atoi(argument[1])]<<"\n";
         }
 
-        mnp.SetPuzzleWeight(atoi(argument[3])); //1
         // case 0:UnitWeight, case 1:SquareRoot, case 2:Squared,
         // case 3:UnitPlusFrac, case 4:SquarePlusOneRoot, case 5:DW
+        mnp.SetPuzzleWeight(atoi(argument[3])); //1
 
-        // DPS_mnp.InitializeSearch(&mnp, start, goal, path);
-        // DPS_mnp.GetPath(&mnp, start, goal, path);
-        // printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu\n", atoi(argument[1]), 6, atof(argument[2]), DPS_mnp.GetNodesExpanded(), path.size());
         
         DPS_mnp.InitializeSearch(&mnp, start, goal, path);
-        clock_t start_time, end_time;
+
+		clock_t start_time, end_time;
         start_time = clock();
 
-        float avg_runtime_per_node = DPS_mnp.GetPath_v2(&mnp, start, goal, path);
-        avg_runtime_per_node *= pow(10, 9);
+		DPS_mnp.GetPath(&mnp, start, goal, path);
 
-        end_time = clock();
-        float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-        total_runningTime *= pow(10, 9);
-            
-        printf("Time - STP %d ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f \n", atoi(argument[1]), 6, atoi(argument[2]), DPS_mnp.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
-        
+		end_time = clock();
+        float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+        TotalRunningTime *= pow(10, 9);
 
-        exit(0);
+		printf("STP %d ALG %d weight %1.2f Nodes %llu path %lu TotalRunningTime %1.3f\n", atoi(argument[1]), 7, atof(argument[2]), DPS_mnp.GetNodesExpanded(), path.size(), TotalRunningTime);
+		
+		exit(0);
     }
     else if (strcmp(argument[0], "-gridBaseLines") == 0){
         // Runs all five baselines.
@@ -978,22 +969,18 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             tas.SetPhi([=](double h,double g){return g+h;});
             }
             
-            // tas.InitializeSearch(me, start, goal, solution);
-            // tas.GetPath(me, start, goal, solution);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas.GetNodesExpanded(), me->GetPathLength(solution));
-
             tas.InitializeSearch(me, start, goal, solution);
+
             clock_t start_time, end_time;
             start_time = clock();
 
-            float avg_runtime_per_node = tas.GetPath_v2(me, start, goal, solution);
-            avg_runtime_per_node *= pow(10, 9);
+			tas.GetPath(me, start, goal, solution);
 
             end_time = clock();
             float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
             TotalRunningTime *= pow(10, 9);
-  
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu avg_runtime_per_node %1.3f TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas.GetNodesExpanded(), avg_runtime_per_node, TotalRunningTime);
+
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas.GetNodesExpanded(), TotalRunningTime);
 
         }
         exit(0);
@@ -1132,24 +1119,24 @@ int MyCLHandler(char *argument[], int maxNumArgs)
                 }
             }
             
-            // dsd.InitializeSearch(me, start, goal, solution);
-            // dsd.GetPath(me, start, goal, solution);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd.GetNodesExpanded(), me->GetPathLength(solution));
-
-            dsd.InitializeSearch_v3(me, start, goal, solution);
             clock_t start_time, end_time;
             start_time = clock();
-            
-            float avg_runtime_per_node = dsd.GetPath_v3(me, start, goal, solution);
-            avg_runtime_per_node *= pow(10, 9);
+
+            if(!useLookUpTable){
+                dsd.InitializeSearch(me, start, goal, solution);
+			    dsd.GetPath(me, start, goal, solution);
+            }
+            else{
+                dsd.InitializeSearch_v2(me, start, goal, solution);
+			    dsd.GetPath_v2(me, start, goal, solution);
+            }
 
             end_time = clock();
             float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
             TotalRunningTime *= pow(10, 9);
 
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu avg_runtime_per_node %1.3f TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd.GetNodesExpanded(), avg_runtime_per_node, TotalRunningTime);
-
-        }
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd.GetNodesExpanded(), TotalRunningTime);
+		}
         exit(0);
     }
     else if (strcmp(argument[0], "-gridDPS") == 0){
@@ -1281,24 +1268,19 @@ int MyCLHandler(char *argument[], int maxNumArgs)
                 }
             }
             
-            // dps.InitializeSearch(me, start, goal, solution);
-            // dps.GetPath(me, start, goal, solution);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", argument[1], x, exp.GetDistance(), 6, atof(argument[3]), dps.GetNodesExpanded(), me->GetPathLength(solution));
-
             dps.InitializeSearch(me, start, goal, solution);
+			
             clock_t start_time, end_time;
             start_time = clock();
 
-            float avg_runtime_per_node = dps.GetPath_v2(me, start, goal, solution);
-            avg_runtime_per_node *= pow(10, 9);
+			dps.GetPath(me, start, goal, solution);
 
             end_time = clock();
             float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
             TotalRunningTime *= pow(10, 9);
-                
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu avg_runtime_per_node %1.3f TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), 6, atof(argument[3]), dps.GetNodesExpanded(), avg_runtime_per_node, TotalRunningTime);
 
-        }
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), 7, atof(argument[3]), dps.GetNodesExpanded(), TotalRunningTime);
+		}
         exit(0);
     }
     else if (strcmp(argument[0], "-rtBaseLines") == 0){
@@ -1378,25 +1360,20 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             tas_track.SetPhi([=](double h,double g){return (g+h+sqrt((g+h)*(g+h)+4*proveBound*(proveBound-1)*h*h))/(2*proveBound);});
             }
 
-            // tas_track.InitializeSearch(r, from, end, path);
-            // tas_track.GetPath(r, from, end, path);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu \n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas_track.GetNodesExpanded());
-
             tas_track.InitializeSearch(r, from, end, path);
-            clock_t start_time, end_time;
+
+			clock_t start_time, end_time;
             start_time = clock();
 
-            float avg_runtime_per_node = tas_track.GetPath_v2(r, from, end, path);
-            avg_runtime_per_node *= pow(10, 9);
+			tas_track.GetPath(r, from, end, path);
 
-            end_time = clock();
-            float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-            total_runningTime *= pow(10, 9);
-                
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas_track.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
+			end_time = clock();
+            float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+            TotalRunningTime *= pow(10, 9);
 
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), tas_track.GetNodesExpanded(), TotalRunningTime);
 
-        }
+		}
         exit(0);
     }
     else if (strcmp(argument[0], "-rtDSD") == 0){
@@ -1459,25 +1436,26 @@ int MyCLHandler(char *argument[], int maxNumArgs)
 
             r->UpdateMap(m);
 
-            // dsd_track.InitializeSearch(r, from, end, path);
-            // dsd_track.GetPath(r, from, end, path);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu \n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd_track.GetNodesExpanded());
-
-            dsd_track.InitializeSearch_v3(r, from, end, path);
-            clock_t start_time, end_time;
+			clock_t start_time, end_time;
             start_time = clock();
 
-            float avg_runtime_per_node = dsd_track.GetPath_v3(r, from, end, path);
-            avg_runtime_per_node *= pow(10, 9);
+            if(!useLookUpTable){
+                dsd_track.InitializeSearch(r, from, end, path);
+			    dsd_track.GetPath(r, from, end, path);
+            }
+            else{
+                dsd_track.InitializeSearch_v2(r, from, end, path);
+			    dsd_track.GetPath_v2(r, from, end, path);
+            }
 
-            end_time = clock();
-            float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-            total_runningTime *= pow(10, 9);
-                
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd_track.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
 
+			end_time = clock();
+            float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+            TotalRunningTime *= pow(10, 9);
 
-        }
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd_track.GetNodesExpanded(), TotalRunningTime);
+
+		}
         exit(0);
     }
     else if (strcmp(argument[0], "-rtDPS") == 0)
@@ -1541,278 +1519,21 @@ int MyCLHandler(char *argument[], int maxNumArgs)
             double proveBound = atof(argument[3]);
             dps_track.SetOptimalityBound(proveBound);
 
-            // dps_track.InitializeSearch(r, from, end, path);
-            // dps_track.GetPath(r, from, end, path);
-            // printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu \n", argument[1], x, exp.GetDistance(), 6, atof(argument[3]), dps_track.GetNodesExpanded());
-
             dps_track.InitializeSearch(r, from, end, path);
-            clock_t start_time, end_time;
+
+			clock_t start_time, end_time;
             start_time = clock();
 
-            float avg_runtime_per_node = dps_track.GetPath_v2(r, from, end, path);
-            avg_runtime_per_node *= pow(10, 9);
+			dps_track.GetPath(r, from, end, path);
 
-            end_time = clock();
-            float total_runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-            total_runningTime *= pow(10, 9);
-                
-            printf("Time - MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu total_runningTime %1.3f avg_runtime_per_node %1.3f\n", argument[1], x, exp.GetDistance(), 6, atof(argument[3]), dps_track.GetNodesExpanded(), total_runningTime, avg_runtime_per_node);
+			end_time = clock();
+            float TotalRunningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
+            TotalRunningTime *= pow(10, 9);
 
+			printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu TotalRunningTime %1.3f\n", argument[1], x, exp.GetDistance(), 7, atof(argument[3]), dps_track.GetNodesExpanded(), TotalRunningTime);
 
-        }
+		}
         
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-exp0BaseLines") == 0)
-    {
-        Map *m = new Map(200, 200);
-        MakeDesignedMap(m, atoi(argument[3]), atoi(argument[4]));
-        // MakeDesignedMap(m, 30, 6);
-
-        me = new MapEnvironment(m);
-        // me->SetDiagonalCost(1.5);
-        me->SetDiagonalCost(1.41);
-
-        assert(maxNumArgs >= 5);
-        //Set the cost of each terrain type randomly.
-        for(int i=0; i<4; i++){
-            //[0]=kSwamp, [1]=kWater, [2]=kGrass, [3]=kTrees
-
-            // Define the Hardness
-            // 1. Random Hardness
-            // rdm = random()%101;
-            // hardness[i] = rdm/101+1;
-            //Or 2. Hardcoded Hardness
-            // hardness[0]=2; hardness[1]=1.45; hardness[2]=1.25; hardness[3]=1.95;
-            //Or 3. Get Hardness from Input Argument
-            hardness[0]=atof(argument[5]);/*Followings are "Don't Care":*/hardness[1]=100.0; hardness[2]=100.0; hardness[3]=100.0;
-
-            // Use Hardness to define Cost
-            // 1. Hardness with respect to input w
-            // Tcosts[i] = hardness[i]*(me->GetInputWeight())-(hardness[i]-1);
-            //Or 2. Hardness as the exact Cost
-            Tcosts[i] = hardness[i];
-            //Or 3. The exact Cost hardcoded
-            // Tcosts[i] = 4.5;
-
-            string type;
-            if(i==0) type="Swamp";
-            if(i==1) type="Water";
-            if(i==2) type="Grass";
-            if(i==3) type="Trees";
-            // std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
-        }
-        me->SetTerrainCost(Tcosts);
-
-        double proveBound = atof(argument[2]);
-        tas.SetWeight(proveBound);
-        me->SetInputWeight(atof(argument[2]));
-
-        start = {1,99};
-        goal = {198, 99};
-
-        //Set the Baseline Policy.
-        if(atoi(argument[1]) == 0){ //WA*
-        tas.SetPhi([=](double h,double g){return g+proveBound*h;});
-        }
-        else if(atoi(argument[1]) == 1){ //PWXD
-        tas.SetPhi([=](double h,double g){return (h>g)?(g+h):(g/proveBound+h*(2*proveBound-1)/proveBound);});
-        }
-        else if(atoi(argument[1]) == 2){ //PWXU
-        tas.SetPhi([=](double h,double g){return (h*(2*proveBound-1)>g)?(g/(2*proveBound-1)+h):(1/proveBound*(g+h));});
-        }
-        else if(atoi(argument[1]) == 3){ //XDP
-        tas.SetPhi([=](double h,double g){return (g+(2*proveBound-1)*h+sqrt((g-h)*(g-h)+4*proveBound*g*h))/(2*proveBound);});
-        }
-        else if(atoi(argument[1]) == 4){ //XUP
-        tas.SetPhi([=](double h,double g){return (g+h+sqrt((g+h)*(g+h)+4*proveBound*(proveBound-1)*h*h))/(2*proveBound);});
-        }
-        else if(atoi(argument[1]) == 5){ //A*
-        tas.SetPhi([=](double h,double g){return g+h;});
-        }
-        
-        tas.InitializeSearch(me, start, goal, solution);
-
-        tas.GetPath(me, start, goal, solution);
-        printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", "Exp0", 0, 197, atoi(argument[1]), atof(argument[2]), tas.GetNodesExpanded(), me->GetPathLength(solution));
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-exp0DSD") == 0){
-        Map *m = new Map(200, 200);
-        MakeDesignedMap(m, atoi(argument[3]), atoi(argument[4]));
-        // MakeDesignedMap(m, 30, 6);
-
-        me = new MapEnvironment(m);
-        // me->SetDiagonalCost(1.5);
-        me->SetDiagonalCost(1.41);
-
-        assert(maxNumArgs >= 5);
-        //Set the cost of each terrain type randomly.
-        for(int i=0; i<4; i++){
-            //[0]=kSwamp, [1]=kWater, [2]=kGrass, [3]=kTrees
-
-            // Define the Hardness
-            // 1. Random Hardness
-            // rdm = random()%101;
-            // hardness[i] = rdm/101+1;
-            //Or 2. Hardcoded Hardness
-            // hardness[0]=2; hardness[1]=1.45; hardness[2]=1.25; hardness[3]=1.95;
-            //Or 3. Get Hardness from Input Argument
-            hardness[0]=atof(argument[5]);/*Followings are "Don't Care":*/hardness[1]=100.0; hardness[2]=100.0; hardness[3]=100.0;
-
-            // Use Hardness to define Cost
-            // 1. Hardness with respect to input w
-            // Tcosts[i] = hardness[i]*(me->GetInputWeight())-(hardness[i]-1);
-            //Or 2. Hardness as the exact Cost
-            Tcosts[i] = hardness[i];
-            //Or 3. The exact Cost hardcoded
-            // Tcosts[i] = 4.5;
-
-            string type;
-            if(i==0) type="Swamp";
-            if(i==1) type="Water";
-            if(i==2) type="Grass";
-            if(i==3) type="Trees";
-            // std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
-        }
-        me->SetTerrainCost(Tcosts);
-
-        dsd.policy = (tExpansionPriority)atoi(argument[1]);
-        dsd.SetWeight(atof(argument[2]));
-        me->SetInputWeight(atof(argument[2]));
-
-        start = {1,99};
-        goal = {198, 99};
-
-        dsd.InitializeSearch(me, start, goal, solution);
-        dsd.GetPath(me, start, goal, solution);
-        printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", "Exp0", 0, 197, atoi(argument[1]), atof(argument[2]), dsd.GetNodesExpanded(), me->GetPathLength(solution));
-        
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-exp0DPS") == 0){
-        Map *m = new Map(200, 200);
-        MakeDesignedMap(m, atoi(argument[2]), atoi(argument[3]));
-        // MakeDesignedMap(m, 30, 6);
-
-        me = new MapEnvironment(m);
-        // me->SetDiagonalCost(1.5);
-        me->SetDiagonalCost(1.41);
-
-        assert(maxNumArgs >= 5);
-        //Set the cost of each terrain type randomly.
-        for(int i=0; i<4; i++){
-            //[0]=kSwamp, [1]=kWater, [2]=kGrass, [3]=kTrees
-
-            // Define the Hardness
-            // 1. Random Hardness
-            // rdm = random()%101;
-            // hardness[i] = rdm/101+1;
-            //Or 2. Hardcoded Hardness
-            // hardness[0]=2; hardness[1]=1.45; hardness[2]=1.25; hardness[3]=1.95;
-            //Or 3. Get Hardness from Input Argument
-            hardness[0]=atof(argument[4]);/*Followings are "Don't Care":*/hardness[1]=100.0; hardness[2]=100.0; hardness[3]=100.0;
-
-            // Use Hardness to define Cost
-            // 1. Hardness with respect to input w
-            // Tcosts[i] = hardness[i]*(me->GetInputWeight())-(hardness[i]-1);
-            //Or 2. Hardness as the exact Cost
-            Tcosts[i] = hardness[i];
-            //Or 3. The exact Cost hardcoded
-            // Tcosts[i] = 4.5;
-
-            string type;
-            if(i==0) type="Swamp";
-            if(i==1) type="Water";
-            if(i==2) type="Grass";
-            if(i==3) type="Trees";
-            // std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
-        }
-        me->SetTerrainCost(Tcosts);
-
-        start = {1,99};
-        goal = {198, 99};
-
-        dps.SetOptimalityBound(atof(argument[1]));
-        me->SetInputWeight(atof(argument[1]));
-
-        dps.InitializeSearch(me, start, goal, solution);
-            
-        dps.GetPath(me, start, goal, solution);
-        printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", "Exp0", 0, 197, 6, atof(argument[1]), dps.GetNodesExpanded(), me->GetPathLength(solution));
-        
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-timeDSWA") == 0)
-    {
-        assert(maxNumArgs >= 4);
-        
-        DSDWAStar<MNPuzzleState<4, 4>, slideDir, MNPuzzle<4, 4>> dsd_mnp;
-        std::vector<MNPuzzleState<4, 4>> path;
-        MNPuzzle<4, 4> mnp;
-        MNPuzzleState<4, 4> start = STP::GetKorfInstance(atoi(argument[1]));
-        MNPuzzleState<4, 4> goal;
-        dsd_mnp.policy = (tExpansionPriority)atoi(argument[2]);
-        dsd_mnp.SetWeight(atof(argument[3]));
-        printf("Solving STP Korf instance [%d of %d] using DSD weight %f\n", atoi(argument[1])+1, 100, atof(argument[3]));
-        
-        clock_t start_time, end_time;
-        start_time = clock();
-
-        // dsd_mnp.GetPath(&mnp, start, goal, path, true);
-        dsd_mnp.GetPath(&mnp, start, goal, path);
-
-        end_time = clock();
-        float runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-
-        printf("STP %d ALG %d weight %1.2f nodePERsec %f path %lu\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), dsd_mnp.GetNodesExpanded()/runningTime, path.size());
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-stpAstar") == 0)
-    {
-        assert(maxNumArgs >= 4);
-        
-        TemplateAStar<MNPuzzleState<4, 4>, slideDir, MNPuzzle<4, 4>> dsd_mnp;
-        std::vector<MNPuzzleState<4, 4>> path;
-        MNPuzzle<4, 4> mnp;
-        MNPuzzleState<4, 4> start = STP::GetKorfInstance(atoi(argument[1]));
-        MNPuzzleState<4, 4> goal;
-        // dsd_mnp.policy = (tExpansionPriority)atoi(argument[2]);
-        dsd_mnp.SetWeight(atof(argument[3]));
-        printf("Solving STP Korf instance [%d of %d] using DSD weight %f\n", atoi(argument[1])+1, 100, atof(argument[3]));
-
-        clock_t start_time, end_time;
-        start_time = clock();
-
-        // dsd_mnp.GetPath(&mnp, start, goal, path, true);
-        dsd_mnp.GetPath(&mnp, start, goal, path);
-
-        end_time = clock();
-        float runningTime = (float) (end_time - start_time) / CLOCKS_PER_SEC;
-
-        printf("STP %d ALG %d weight %1.2f nodePERsec %f path %lu\n", atoi(argument[1]), atoi(argument[2]), atof(argument[3]), dsd_mnp.GetNodesExpanded()/runningTime, path.size());
-        exit(0);
-    }
-    else if (strcmp(argument[0], "-map") == 0)
-    {
-        assert(maxNumArgs >= 5);
-        me = new MapEnvironment(new Map(argument[1]));
-        // ScenarioLoader sl(argument[2]);
-        sl = new ScenarioLoader(argument[2]);
-        // std::cout<<"number of experiments is "<<sl.GetNumExperiments()<<std::endl;
-        for (int x = 0; x < sl->GetNumExperiments(); x++)
-        {
-            Experiment exp = sl->GetNthExperiment(x);
-            start.x = exp.GetStartX();
-            start.y = exp.GetStartY();
-            goal.x = exp.GetGoalX();
-            goal.y = exp.GetGoalY();
-            dsd.policy = (tExpansionPriority)atoi(argument[3]);
-            dsd.SetWeight(atof(argument[4]));
-            // dsd.GetPath(me, start, goal, solution, true);
-            dsd.GetPath(me, start, goal, solution);
-            printf("MAP %s #%d %1.2f ALG %d weight %1.2f Nodes %llu path %f\n", argument[1], x, exp.GetDistance(), atoi(argument[3]), atof(argument[4]), dsd.GetNodesExpanded(), me->GetPathLength(solution));
-        }
         exit(0);
     }
     
@@ -1925,22 +1646,9 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                         std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
                     }
                     if(useLookUpTable){
-                        // look_up_table.clear();
-                        // dsd.InitializeSearch_v2(me, start, goal, solution);
                         LookUpVector.clear();
-                        dsd.InitializeSearch_v3(me, start, goal, solution);
-                        
-                    }
-                    else{
-                        data.resize(0);
-                        dsd.InitializeSearch(me, start, goal, solution);
-                    }
-                }
-                else if(mapcmd == 6){
-                    //Does not apply to Racetrack
-                    if(useLookUpTable){
-                        look_up_table.clear();
                         dsd.InitializeSearch_v2(me, start, goal, solution);
+                        
                     }
                     else{
                         data.resize(0);
@@ -1991,10 +1699,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                         std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
                     }
                     if(useLookUpTable){
-                        // look_up_table.clear();
-                        // dsd.InitializeSearch_v2(me, start, goal, solution);
                         LookUpVector.clear();
-                        dsd.InitializeSearch_v3(me, start, goal, solution);
+                        dsd.InitializeSearch_v2(me, start, goal, solution);
                     }
                     else{
                         data.resize(0);
@@ -2007,8 +1713,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Problem: %d\n", problemNumber);
                     printf("Policy: %d\n", dsd_track.policy);
                     printf("Bound: %f\n", bound);
-                    data.resize(0);
-                    dsd_track.InitializeSearch(r, from, end, path);
+                    if(useLookUpTable){
+                        LookUpVector.clear();
+                        dsd_track.InitializeSearch_v2(r, from, end, path);
+                    }
+                    else{
+                        data.resize(0);
+                        dsd_track.InitializeSearch(r, from, end, path);
+                    }
                 }
                 else if(mapcmd == 7){
                     printf("==============\n");
@@ -2069,9 +1781,6 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Problem: %d\n", problemNumber);
                     printf("Policy: %d\n", dsd.policy);
                     printf("Bound: %f\n", bound);
-                    // data.resize(0);
-                    // dsd.InitializeSearch(me, start, goal, solution);
-                    look_up_table.clear();
                     dsd.InitializeSearch_v2(me, start, goal, solution);
                 }
                 else if(mapcmd == 6){
@@ -2083,8 +1792,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Problem: %d\n", problemNumber);
                     printf("Policy: %d\n", dsd_track.policy);
                     printf("Bound: %f\n", bound);
-                    data.resize(0);
-                    dsd_track.InitializeSearch(r, from, end, path);
+                    if(useLookUpTable){
+                        LookUpVector.clear();
+                        dsd_track.InitializeSearch_v2(r, from, end, path);
+                    }
+                    else{
+                        data.resize(0);
+                        dsd_track.InitializeSearch(r, from, end, path);
+                    }
                 }
                 else if(mapcmd == 7){
                     //Set the input weight to the new bound
@@ -2124,10 +1839,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Policy: %d\n", dsd.policy);
                     printf("Bound: %f\n", bound);
                     if(useLookUpTable){
-                        // look_up_table.clear();
-                        // dsd.InitializeSearch_v2(me, start, goal, solution);
                         LookUpVector.clear();
-                        dsd.InitializeSearch_v3(me, start, goal, solution);
+                        dsd.InitializeSearch_v2(me, start, goal, solution);
                     }
                     else{
                         data.resize(0);
@@ -2140,8 +1853,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Problem: %d\n", problemNumber);
                     printf("Policy: %d\n", dsd_track.policy);
                     printf("Bound: %f\n", bound);
-                    data.resize(0);
-                    dsd_track.InitializeSearch(r, from, end, path);
+                    if(useLookUpTable){
+                        LookUpVector.clear();
+                        dsd_track.InitializeSearch_v2(r, from, end, path);
+                    }
+                    else{
+                        data.resize(0);
+                        dsd_track.InitializeSearch(r, from, end, path);
+                    }
                 }
                 else if(mapcmd == 7){
                     //Does not apply here
@@ -2171,10 +1890,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Policy: %d\n", dsd.policy);
                     printf("Bound: %f\n", bound);
                     if(useLookUpTable){
-                        // look_up_table.clear();
-                        // dsd.InitializeSearch_v2(me, start, goal, solution);
                         LookUpVector.clear();
-                        dsd.InitializeSearch_v3(me, start, goal, solution);
+                        dsd.InitializeSearch_v2(me, start, goal, solution);
                     }
                     else{
                         data.resize(0);
@@ -2188,8 +1905,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     printf("Problem: %d\n", problemNumber);
                     printf("Policy: %d\n", dsd_track.policy);
                     printf("Bound: %f\n", bound);
-                    data.resize(0);
-                    dsd_track.InitializeSearch(r, from, end, path);
+                    if(useLookUpTable){
+                        LookUpVector.clear();
+                        dsd_track.InitializeSearch_v2(r, from, end, path);
+                    }
+                    else{
+                        data.resize(0);
+                        dsd_track.InitializeSearch(r, from, end, path);
+                    }
                 }
                 else if(mapcmd == 7){
                     //Does not apply here
@@ -2287,10 +2010,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                 printf("Policy: %d\n", dsd.policy);
                 printf("Bound: %f\n", bound);
                 if(useLookUpTable){
-                    // look_up_table.clear();
-                    // dsd.InitializeSearch_v2(me, start, goal, solution);
                     LookUpVector.clear();
-                    dsd.InitializeSearch_v3(me, start, goal, solution);
+                    dsd.InitializeSearch_v2(me, start, goal, solution);
                 }
                 else{
                     data.resize(0);
@@ -2303,8 +2024,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                 printf("Problem: %d\n", problemNumber);
                 printf("Policy: %d\n", dsd_track.policy);
                 printf("Bound: %f\n", bound);
-                data.resize(0);
-                dsd_track.InitializeSearch(r, from, end, path);
+                if(useLookUpTable){
+                    LookUpVector.clear();
+                    dsd_track.InitializeSearch_v2(r, from, end, path);
+                }
+                else{
+                    data.resize(0);
+                    dsd_track.InitializeSearch(r, from, end, path);
+                }
             }
             else if(mapcmd == 7){
                 problemNumber += 1;
@@ -2403,10 +2130,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                 printf("Policy: %d\n", dsd.policy);
                 printf("Bound: %f\n", bound);
                 if(useLookUpTable){
-                    // look_up_table.clear();
-                    // dsd.InitializeSearch_v2(me, start, goal, solution);
                     LookUpVector.clear();
-                    dsd.InitializeSearch_v3(me, start, goal, solution);
+                    dsd.InitializeSearch_v2(me, start, goal, solution);
                 }
                 else{
                     data.resize(0);
@@ -2419,8 +2144,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                 printf("Problem: %d\n", problemNumber);
                 printf("Policy: %d\n", dsd_track.policy);
                 printf("Bound: %f\n", bound);
-                data.resize(0);
-                dsd_track.InitializeSearch(r, from, end, path);
+                if(useLookUpTable){
+                    LookUpVector.clear();
+                    dsd_track.InitializeSearch_v2(r, from, end, path);
+                }
+                else{
+                    data.resize(0);
+                    dsd_track.InitializeSearch(r, from, end, path);
+                }
             }
             else if(mapcmd == 7){
                 problemNumber -= 1;
@@ -2461,10 +2192,8 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                     std::cout<<"Cost "<<type<<"="<<Tcosts[i]<<" ("<<hardness[i]<<"*"<<me->GetInputWeight()<<"-"<<(hardness[i]-1)<<")"<<std::endl;
                 }
                 if(useLookUpTable){
-                    // look_up_table.clear();
-                    // dsd.InitializeSearch_v2(me, start, goal, solution);
                     LookUpVector.clear();
-                    dsd.InitializeSearch_v3(me, start, goal, solution);
+                    dsd.InitializeSearch_v2(me, start, goal, solution);
                 }
                 else{
                     data.resize(0);
@@ -2477,8 +2206,14 @@ void MyDisplayHandler(unsigned long windowID, tKeyboardModifier mod, char key)
                 printf("Problem: %d\n", problemNumber);
                 printf("Policy: %d\n", dsd_track.policy);
                 printf("Bound: %f\n", bound);
-                data.resize(0);
-                dsd_track.InitializeSearch(r, from, end, path);
+                if(useLookUpTable){
+                    LookUpVector.clear();
+                    dsd_track.InitializeSearch_v2(r, from, end, path);
+                }
+                else{
+                    data.resize(0);
+                    dsd_track.InitializeSearch(r, from, end, path);
+                }
             }
             else if(mapcmd == 7){
                 printf("==============\n");
